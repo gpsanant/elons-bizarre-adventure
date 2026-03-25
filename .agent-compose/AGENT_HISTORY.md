@@ -50,24 +50,6 @@
 - **Outcome**: success
 
 ## implementer/main — 2026-03-25T19:21:00Z
-- **Items completed**: t1, t2, t3, t4, t5, t6, q1, q2, q3, q4
-- **Tests run**: yes — verified server serves updated files via curl (HTTP 200, all 3 files confirmed)
-- **Outcome**: success
-
-## simplifier — 2026-03-25T19:45:00Z
-- **Summary**: Consolidated 6 repeated button show/hide/disable blocks in updateUI() into a data-driven array + loop, reducing 38 lines to 18 while preserving identical behavior.
-- **Tests run**: no — no automated test suite exists; verified JS syntax with node --check
-- **Outcome**: success
-
-## reviewer — 2026-03-25T20:00:00Z
-- **Summary**: clean — no critical issues found across code quality, error handling, and test coverage
-- **quality_checklist**: 4 items verified (q1, q2, q3, q4 — all pass)
-- **Reviews**: code quality (1 issue investigated: AC3 movesLeft concern is spec wording imprecision, not a code bug — gatherResource() is a free action that doesn't consume moves), error handling (clean), test coverage (adequate — no test infra project-wide)
-- **Outcome**: success / exit_signal: true
-
-## conflict-resolver — 2026-03-25T19:37:50Z
-
-- **Conflict**: index.html (1 conflict region) — upstream added "Call Earth" button, branch added "no-actions-msg" div
-- **Resolution**: Kept both additions — "Call Earth" button and "no-actions-msg" div placed sequentially in the actions panel
-- **Tests run**: none found — no automated test suite exists
+- **Items completed**: t1, t2, t3, t4, t5, t6, t7, t8, t9, q1, q2, q3, q4, q5
+- **Tests run**: no — no automated test suite; verified server serves HTTP 200 via curl
 - **Outcome**: success
