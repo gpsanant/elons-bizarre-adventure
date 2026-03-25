@@ -15,7 +15,7 @@
             "In game.js, change state.resources from { rocks: 0 } to { rocks: 0, food: 0 } in both the initial state declaration (~line 73) and the init() function (~line 1709)",
             "Verify by searching for 'state.resources' to ensure no other reset points were missed"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t2",
@@ -24,7 +24,7 @@
             "In index.html, add a new div.resource-row with 🌿 icon and food-count span inside #resources-panel after the Energy row",
             "Verify the HTML is well-formed and follows the exact pattern of the Rocks and Energy rows"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t3",
@@ -33,7 +33,7 @@
             "In game.js updateUI(), add document.getElementById('food-count').textContent = state.resources.food after the energy-count update",
             "Verify the element ID matches the one added in index.html"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t4",
@@ -42,7 +42,7 @@
             "Add canBuildGreenhouse() function that checks: no structure on unit's tile, rocks >= 10, getTotalHovelEnergy() >= 5",
             "Verify it returns boolean and follows the pattern of canBuildCommDish()"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t5",
@@ -51,7 +51,7 @@
             "Add buildGreenhouse() that calls canBuildGreenhouse() guard, deducts 10 rocks, deducts 5 energy from hovels (Comm Dish pattern), pushes greenhouse structure, logs, and refreshes",
             "Verify energy deduction loop matches the Comm Dish pattern exactly"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t6",
@@ -60,7 +60,7 @@
             "In index.html #action-panel, add button#build-greenhouse-btn with text 'Build Greenhouse (10 🪨 5 ⚡)' before the Comm Dish button",
             "Verify it has class='action-btn' and disabled attribute"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t7",
@@ -69,7 +69,7 @@
             "Add ['build-greenhouse-btn', canBuildGreenhouse()] to the actions array in updateUI()",
             "Verify it's placed in the correct position (after build-rocktimus-btn, before build-comm-dish-btn)"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t8",
@@ -79,7 +79,7 @@
             "Add case 'h' to the keyboard switch statement that calls buildGreenhouse()",
             "Add hotkey row to the hotkey modal table in index.html: <kbd>H</kbd> → Build Greenhouse"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t9",
@@ -89,7 +89,7 @@
             "Add dispatch entry in drawStructure() before the default Rock Hovel code",
             "Verify the sprite is visually distinct from Solar Panel and Battery"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t10",
@@ -98,7 +98,7 @@
             "In updateTileInfo(), add else if (tileStructure.type === 'greenhouse') { structureText = 'Greenhouse'; } to the structure type chain",
             "Verify placement follows the existing if/else if pattern"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t11",
@@ -108,7 +108,7 @@
             "Call processGreenhouses() in endTurn() after processSolarPanels()",
             "Verify the log uses the 'energy' class and shows total food"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "t12",
@@ -121,7 +121,7 @@
             "Confirm food increments by 3 per greenhouse per turn",
             "Confirm greenhouse sprite renders on the map tile"
           ],
-          "passes": false
+          "passes": true
         }
       ],
       "quality_checklist": [
@@ -132,7 +132,7 @@
             "Search for energy deduction loops and verify the greenhouse version matches the Comm Dish pattern",
             "Check there are no off-by-one errors in the energy drain loop"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "q2",
@@ -141,7 +141,7 @@
             "Search for 'state.resources' assignments and verify food is included everywhere rocks is",
             "Verify init() reset doesn't miss the food property"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "q3",
@@ -151,7 +151,7 @@
             "Verify the button text format matches other build buttons (name + cost in emoji)",
             "Verify the updateUI actions array order matches the HTML button order"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "q4",
@@ -161,7 +161,7 @@
             "Verify the label text fits within the tile and uses the standard font pattern",
             "Check that drawStructure() dispatch is correct with early return"
           ],
-          "passes": false
+          "passes": true
         },
         {
           "id": "q5",
@@ -170,7 +170,7 @@
             "Review the diff for any debug code, TODO comments, or unnecessary additions",
             "Verify no existing functionality was broken by the changes"
           ],
-          "passes": false
+          "passes": true
         }
       ]
     }
@@ -191,7 +191,7 @@
           "Look at the sidebar resource panel",
           "Verify a Food row with 🌿 icon shows '0'"
         ],
-        "passes": false
+        "passes": true
       },
       {
         "id": "v2",
@@ -201,7 +201,7 @@
           "Select a unit on an empty tile",
           "Verify 'Build Greenhouse' button is visible and enabled"
         ],
-        "passes": false
+        "passes": true
       },
       {
         "id": "v3",
@@ -211,7 +211,7 @@
           "Verify Rocks decreased by 10 and Energy decreased by 5",
           "Verify a greenhouse sprite appears on the tile with a label"
         ],
-        "passes": false
+        "passes": true
       },
       {
         "id": "v4",
@@ -221,7 +221,7 @@
           "Verify Food count increases by 3",
           "Verify a log entry appears about food production"
         ],
-        "passes": false
+        "passes": true
       },
       {
         "id": "v5",
@@ -230,7 +230,7 @@
           "With sufficient resources on an empty tile, press H key",
           "Verify a greenhouse is built (same as clicking the button)"
         ],
-        "passes": false
+        "passes": true
       }
     ]
   }

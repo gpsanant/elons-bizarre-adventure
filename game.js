@@ -74,7 +74,7 @@
         units: [],
         selectedUnit: 0,
         turn: 1,
-        resources: { rocks: 0 },
+        resources: { rocks: 0, food: 0 },
         structures: [],
         robots: [],
         dustStorms: [],
@@ -280,6 +280,64 @@
         ctx.fillText("COMM", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
     }
 
+    function drawGreenhouse(structure) {
+        var x = structure.col * TILE_SIZE;
+        var y = structure.row * TILE_SIZE;
+
+        // Glass frame (dark green border)
+        ctx.fillStyle = "#1a5c1a";
+        ctx.fillRect(x + 3, y + 3, TILE_SIZE - 6, TILE_SIZE - 10);
+
+        // Glass panels (bright green)
+        ctx.fillStyle = "#2d8a2d";
+        ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 14);
+
+        // Glass panel grid lines (lighter green)
+        ctx.strokeStyle = "#44cc44";
+        ctx.lineWidth = 0.5;
+        // Vertical divider
+        ctx.beginPath();
+        ctx.moveTo(x + TILE_SIZE / 2, y + 5);
+        ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE - 9);
+        ctx.stroke();
+        // Horizontal dividers
+        var panelHeight = (TILE_SIZE - 14) / 3;
+        for (var i = 1; i < 3; i++) {
+            ctx.beginPath();
+            ctx.moveTo(x + 5, y + 5 + panelHeight * i);
+            ctx.lineTo(x + TILE_SIZE - 5, y + 5 + panelHeight * i);
+            ctx.stroke();
+        }
+
+        // Glass shine effect
+        ctx.fillStyle = "rgba(102, 255, 102, 0.2)";
+        ctx.fillRect(x + 6, y + 6, 10, 6);
+
+        // Plant/leaf motif (center)
+        ctx.fillStyle = "#66ff66";
+        // Stem
+        ctx.fillRect(x + TILE_SIZE / 2 - 1, y + 14, 2, 10);
+        // Left leaf
+        ctx.beginPath();
+        ctx.ellipse(x + TILE_SIZE / 2 - 5, y + 17, 4, 2, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Right leaf
+        ctx.beginPath();
+        ctx.ellipse(x + TILE_SIZE / 2 + 5, y + 20, 4, 2, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Frame outline
+        ctx.strokeStyle = "#1a5c1a";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 3, y + 3, TILE_SIZE - 6, TILE_SIZE - 10);
+
+        // Label
+        ctx.fillStyle = "#44cc44";
+        ctx.font = "bold 5px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("GRNHSE", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
+    }
+
     function drawMarsThrone(structure) {
         var x = structure.col * TILE_SIZE;
         var y = structure.row * TILE_SIZE;
@@ -349,6 +407,10 @@
         }
         if (structure.type === "comm_dish") {
             drawCommDish(structure);
+            return;
+        }
+        if (structure.type === "greenhouse") {
+            drawGreenhouse(structure);
             return;
         }
         if (structure.type === "mars_throne") {
@@ -773,6 +835,7 @@
         document.getElementById("health-max").textContent = unit.maxHealth;
         document.getElementById("rocks-count").textContent = state.resources.rocks;
         document.getElementById("energy-count").textContent = getTotalHovelEnergy();
+        document.getElementById("food-count").textContent = state.resources.food;
 
         // Lifespan display
         var lifespanEl = document.getElementById("unit-lifespan");
@@ -794,6 +857,7 @@
             ["build-solar-btn",    canBuildSolarPanel()],
             ["build-battery-btn",  canBuildSubparBattery()],
             ["build-rocktimus-btn", canBuildRocktimus()],
+            ["build-greenhouse-btn", canBuildGreenhouse()],
             ["build-comm-dish-btn", canBuildCommDish()]
         ];
         var anyVisible = false;
@@ -869,6 +933,8 @@
                 structureText = "Subpar Battery";
             } else if (tileStructure.type === "comm_dish") {
                 structureText = "Comm Dish";
+            } else if (tileStructure.type === "greenhouse") {
+                structureText = "Greenhouse";
             } else if (tileStructure.type === "mars_throne") {
                 structureText = "Mars Throne";
             }
@@ -1222,6 +1288,41 @@
         refreshView();
     }
 
+    // --------------- Greenhouse Construction ---------------
+    function canBuildGreenhouse() {
+        var unit = getSelectedUnit();
+        if (state.resources.rocks < 10) return false;
+        if (getTotalHovelEnergy() < 5) return false;
+        if (getStructureAt(unit.row, unit.col) !== null) return false;
+        return true;
+    }
+
+    function buildGreenhouse() {
+        if (!canBuildGreenhouse()) return;
+        var unit = getSelectedUnit();
+
+        state.resources.rocks -= 10;
+
+        // Deduct 5 energy distributed across hovels in order
+        var energyNeeded = 5;
+        for (var i = 0; i < state.structures.length && energyNeeded > 0; i++) {
+            if (state.structures[i].type !== "rock_hovel") continue;
+            var drain = Math.min(state.structures[i].energy, energyNeeded);
+            state.structures[i].energy -= drain;
+            energyNeeded -= drain;
+        }
+
+        state.structures.push({
+            type: "greenhouse",
+            row: unit.row,
+            col: unit.col,
+        });
+
+        addLog(unit.name + " built a Greenhouse at (" + unit.col + ", " + unit.row + ")", "build");
+
+        refreshView();
+    }
+
     // --------------- Call Earth Action ---------------
     function canCallEarth() {
         if (state.gameOver) return false;
@@ -1379,6 +1480,19 @@
         }
         if (totalGenerated > 0) {
             addLog("Solar Panels generated " + totalGenerated + " Energy! (Total: " + getTotalHovelEnergy() + ")", "energy");
+        }
+    }
+
+    // --------------- Greenhouse Processing ---------------
+    function processGreenhouses() {
+        var count = 0;
+        for (var i = 0; i < state.structures.length; i++) {
+            if (state.structures[i].type === "greenhouse") count++;
+        }
+        if (count > 0) {
+            var produced = count * 3;
+            state.resources.food += produced;
+            addLog("Greenhouses produced " + produced + " Food! (Total: " + state.resources.food + ")", "energy");
         }
     }
 
@@ -1617,6 +1731,7 @@
         processSubparBatteryExplosions();
         processUnitDegradation();
         processSolarPanels();
+        processGreenhouses();
         processDustStorms();
 
         refreshView();
@@ -1691,6 +1806,10 @@
         if (state.gameOver) return;
         buildRocktimus();
     });
+    document.getElementById("build-greenhouse-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        buildGreenhouse();
+    });
     document.getElementById("build-comm-dish-btn").addEventListener("click", function () {
         if (state.gameOver) return;
         buildCommDish();
@@ -1762,6 +1881,9 @@
             case "r":
                 buildRocktimus();
                 return;
+            case "h":
+                buildGreenhouse();
+                return;
             case "c":
                 buildCommDish();
                 return;
@@ -1799,7 +1921,7 @@
         state.units = [elonUnit];
         state.selectedUnit = 0;
         state.turn = 1;
-        state.resources = { rocks: 0 };
+        state.resources = { rocks: 0, food: 0 };
         state.structures = [];
         state.robots = [];
         state.dustStorms = [];
