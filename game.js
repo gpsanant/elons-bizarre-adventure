@@ -80,6 +80,9 @@
         selectedTile: null,
         logs: [],
         hotkeyModalOpen: false,
+        contactedEarth: false,
+        commDishesUsedThisTurn: [],
+        callEarthDialogOpen: false,
     };
 
     function refreshView() {
@@ -737,6 +740,10 @@
         var commDishBtn = document.getElementById("build-comm-dish-btn");
         commDishBtn.disabled = !canBuildCommDish();
 
+        // Call Earth button
+        var callEarthBtn = document.getElementById("call-earth-btn");
+        callEarthBtn.disabled = !canCallEarth();
+
         // Tile info
         updateTileInfo();
     }
@@ -1017,6 +1024,65 @@
         addLog(unit.name + " constructed a Rocktimus Robot at (" + openTile.col + ", " + openTile.row + ")", "construct");
 
         refreshView();
+    }
+
+    // --------------- Call Earth Action ---------------
+    function getAdjacentCommDish(unit) {
+        // Check if unit is on a comm dish
+        var onDish = getStructureAt(unit.row, unit.col);
+        if (onDish && onDish.type === "comm_dish") return onDish;
+        // Check adjacent tiles
+        for (var dr = -1; dr <= 1; dr++) {
+            for (var dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                var nr = unit.row + dr;
+                var nc = unit.col + dc;
+                if (!isInBounds(nr, nc)) continue;
+                var s = getStructureAt(nr, nc);
+                if (s && s.type === "comm_dish") return s;
+            }
+        }
+        return null;
+    }
+
+    function canCallEarth() {
+        if (state.gameOver) return false;
+        var unit = getSelectedUnit();
+        var dish = getAdjacentCommDish(unit);
+        if (!dish) return false;
+        // Check if this dish has already been used this turn
+        var dishKey = dish.row + "," + dish.col;
+        return state.commDishesUsedThisTurn.indexOf(dishKey) === -1;
+    }
+
+    function callEarth() {
+        if (!canCallEarth()) return;
+        var unit = getSelectedUnit();
+        var dish = getAdjacentCommDish(unit);
+        var dishKey = dish.row + "," + dish.col;
+        state.commDishesUsedThisTurn.push(dishKey);
+
+        var success = Math.random() < 0.01;
+        var dialogEl = document.getElementById("call-earth-dialog");
+        var msgEl = document.getElementById("call-earth-message");
+
+        if (success) {
+            state.contactedEarth = true;
+            msgEl.textContent = "We hope you are enjoying your exile on Mars, Elon. No, we have not changed our minds.";
+            addLog(unit.name + " contacted Earth from Comm Dish at (" + dish.col + ", " + dish.row + ")! They responded!", "comm");
+        } else {
+            msgEl.textContent = "*nothing but static*";
+            addLog(unit.name + " tried to call Earth from Comm Dish at (" + dish.col + ", " + dish.row + ")... nothing but static.", "comm");
+        }
+
+        state.callEarthDialogOpen = true;
+        dialogEl.classList.remove("hidden");
+        refreshView();
+    }
+
+    function closeCallEarthDialog() {
+        state.callEarthDialogOpen = false;
+        document.getElementById("call-earth-dialog").classList.add("hidden");
     }
 
     // --------------- Comm Dish Construction ---------------
@@ -1317,6 +1383,9 @@
             state.units[i].movesLeft = state.units[i].movesMax;
         }
 
+        // Reset comm dish usage tracking for the new turn
+        state.commDishesUsedThisTurn = [];
+
         addLog("--- Turn " + state.turn + " ---", "turn");
 
         processSubparBatteryExplosions();
@@ -1400,6 +1469,11 @@
         if (state.gameOver) return;
         buildCommDish();
     });
+    document.getElementById("call-earth-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        callEarth();
+    });
+    document.getElementById("close-call-earth-dialog").addEventListener("click", closeCallEarthDialog);
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -1411,8 +1485,9 @@
             return;
         }
 
-        // Block all game input while modal is open or game over
+        // Block all game input while modal/dialog is open or game over
         if (state.hotkeyModalOpen) return;
+        if (state.callEarthDialogOpen) return;
         if (state.gameOver) return;
 
         const unit = getSelectedUnit();
@@ -1454,6 +1529,9 @@
             case "c":
                 buildCommDish();
                 return;
+            case "l":
+                callEarth();
+                return;
             case "Tab":
                 e.preventDefault();
                 if (state.units.length > 1) {
@@ -1489,6 +1567,9 @@
         state.dustStormIdCounter = 0;
         state.gameOver = false;
         state.logs = [];
+        state.contactedEarth = false;
+        state.commDishesUsedThisTurn = [];
+        state.callEarthDialogOpen = false;
         state.selectedTile = state.map[elonUnit.row][elonUnit.col];
 
         // Schedule first dust storm within the first 10 turns

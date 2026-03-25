@@ -334,3 +334,29 @@ kbd {
     margin-top: 12px;
     margin-bottom: 0;
 }
+
+/* --------------- Call Earth Dialog --------------- */
+#call-earth-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#call-earth-dialog.hidden {
+    display: none;
+}
+
+.call-earth-msg {
+    font-size: 1rem;
+    color: #88ccff;
+    text-align: center;
+    padding: 12px 0;
+    font-style: italic;
+}
+
+#game-log .log-entry.comm {
+    color: #88ccff;
+}
