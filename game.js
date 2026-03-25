@@ -715,47 +715,27 @@
             }
         }
 
-        // Gather button
-        const gatherBtn = document.getElementById("gather-btn");
-        var canGather = canUnitHarvest(unit);
-        gatherBtn.disabled = !canGather;
-        gatherBtn.style.display = canGather ? "" : "none";
-
-        // Build Rock Hovel button
-        var buildBtn = document.getElementById("build-hovel-btn");
+        // Show/hide action buttons based on whether the action is available
         var hasStructureOnTile = getStructureAt(unit.row, unit.col) !== null;
-        var canHovel = state.resources.rocks >= 10 && !hasStructureOnTile;
-        buildBtn.disabled = !canHovel;
-        buildBtn.style.display = canHovel ? "" : "none";
-
-        // Build Solar Panel button
-        var solarBtn = document.getElementById("build-solar-btn");
-        var canSolar = canBuildSolarPanel();
-        solarBtn.disabled = !canSolar;
-        solarBtn.style.display = canSolar ? "" : "none";
-
-        // Build Subpar Battery button
-        var batteryBtn = document.getElementById("build-battery-btn");
-        var canBattery = canBuildSubparBattery();
-        batteryBtn.disabled = !canBattery;
-        batteryBtn.style.display = canBattery ? "" : "none";
-
-        // Build Rocktimus button
-        var rocktimusBtn = document.getElementById("build-rocktimus-btn");
-        var canRock = canBuildRocktimus();
-        rocktimusBtn.disabled = !canRock;
-        rocktimusBtn.style.display = canRock ? "" : "none";
-
-        // Build Comm Dish button
-        var commDishBtn = document.getElementById("build-comm-dish-btn");
-        var canComm = canBuildCommDish();
-        commDishBtn.disabled = !canComm;
-        commDishBtn.style.display = canComm ? "" : "none";
+        var actions = [
+            ["gather-btn",         canUnitHarvest(unit)],
+            ["build-hovel-btn",    state.resources.rocks >= 10 && !hasStructureOnTile],
+            ["build-solar-btn",    canBuildSolarPanel()],
+            ["build-battery-btn",  canBuildSubparBattery()],
+            ["build-rocktimus-btn", canBuildRocktimus()],
+            ["build-comm-dish-btn", canBuildCommDish()]
+        ];
+        var anyVisible = false;
+        for (var i = 0; i < actions.length; i++) {
+            var btn = document.getElementById(actions[i][0]);
+            var enabled = actions[i][1];
+            btn.disabled = !enabled;
+            btn.style.display = enabled ? "" : "none";
+            if (enabled) anyVisible = true;
+        }
 
         // No actions fallback message
-        var noActionsMsg = document.getElementById("no-actions-msg");
-        var anyVisible = canGather || canHovel || canSolar || canBattery || canRock || canComm;
-        noActionsMsg.style.display = anyVisible ? "none" : "";
+        document.getElementById("no-actions-msg").style.display = anyVisible ? "none" : "";
 
         // Call Earth button
         var callEarthBtn = document.getElementById("call-earth-btn");
