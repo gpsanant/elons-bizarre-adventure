@@ -83,3 +83,8 @@
 - **Items completed**: t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, q1, q2, q3, q4, q5
 - **Tests run**: yes — node --check game.js passed (syntax valid); server responded HTTP 200 via curl
 - **Outcome**: success
+
+## simplifier — 2026-03-25T22:30:00Z
+- **Summary**: Extracted `deductHovelEnergy(amount)` helper to eliminate duplicated energy-deduction-across-hovels loop in `buildCommDish` and `buildGreenhouse`; consistent variable naming (`remaining` instead of mixed `energyToSpend`/`energyNeeded`)
+- **Tests run**: yes — node --check game.js passed (syntax valid)
+- **Outcome**: success
