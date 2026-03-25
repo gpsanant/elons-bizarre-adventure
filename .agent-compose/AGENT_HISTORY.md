@@ -29,3 +29,8 @@
 - **quality_checklist**: 5 items verified (q1, q2, q3, q4, q5 — all pass)
 - **Reviews**: code quality (1 issue: Important 85 — hovel energy exceeds capacity after battery explosion), error handling (clean), test coverage (adequate — no test infra project-wide)
 - **Outcome**: exit_signal: false (1 blocker)
+
+## reviewer — 2026-03-25T18:00:00Z
+- **Summary**: issues fixed — added energy clamping in processSubparBatteryExplosions; after any battery explodes, all rock hovels have their energy clamped to getHovelCapacity() with state.resources.energy adjusted
+- **quality_checklist**: 5 items verified (q1, q2, q3, q4, q5 — all pass)
+- **Outcome**: success / exit_signal: true
