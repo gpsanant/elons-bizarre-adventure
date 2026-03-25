@@ -217,6 +217,13 @@ header .subtitle {
     margin-top: 6px;
 }
 
+.no-actions-msg {
+    font-size: 0.8rem;
+    color: #aa9988;
+    padding: 8px 0;
+    text-align: center;
+}
+
 #map-wrapper {
     flex: 1;
     display: flex;

@@ -717,28 +717,45 @@
 
         // Gather button
         const gatherBtn = document.getElementById("gather-btn");
-        gatherBtn.disabled = !canUnitHarvest(unit);
+        var canGather = canUnitHarvest(unit);
+        gatherBtn.disabled = !canGather;
+        gatherBtn.style.display = canGather ? "" : "none";
 
         // Build Rock Hovel button
         var buildBtn = document.getElementById("build-hovel-btn");
         var hasStructureOnTile = getStructureAt(unit.row, unit.col) !== null;
-        buildBtn.disabled = state.resources.rocks < 10 || hasStructureOnTile;
+        var canHovel = state.resources.rocks >= 10 && !hasStructureOnTile;
+        buildBtn.disabled = !canHovel;
+        buildBtn.style.display = canHovel ? "" : "none";
 
         // Build Solar Panel button
         var solarBtn = document.getElementById("build-solar-btn");
-        solarBtn.disabled = !canBuildSolarPanel();
+        var canSolar = canBuildSolarPanel();
+        solarBtn.disabled = !canSolar;
+        solarBtn.style.display = canSolar ? "" : "none";
 
         // Build Subpar Battery button
         var batteryBtn = document.getElementById("build-battery-btn");
-        batteryBtn.disabled = !canBuildSubparBattery();
+        var canBattery = canBuildSubparBattery();
+        batteryBtn.disabled = !canBattery;
+        batteryBtn.style.display = canBattery ? "" : "none";
 
         // Build Rocktimus button
         var rocktimusBtn = document.getElementById("build-rocktimus-btn");
-        rocktimusBtn.disabled = !canBuildRocktimus();
+        var canRock = canBuildRocktimus();
+        rocktimusBtn.disabled = !canRock;
+        rocktimusBtn.style.display = canRock ? "" : "none";
 
         // Build Comm Dish button
         var commDishBtn = document.getElementById("build-comm-dish-btn");
-        commDishBtn.disabled = !canBuildCommDish();
+        var canComm = canBuildCommDish();
+        commDishBtn.disabled = !canComm;
+        commDishBtn.style.display = canComm ? "" : "none";
+
+        // No actions fallback message
+        var noActionsMsg = document.getElementById("no-actions-msg");
+        var anyVisible = canGather || canHovel || canSolar || canBattery || canRock || canComm;
+        noActionsMsg.style.display = anyVisible ? "none" : "";
 
         // Call Earth button
         var callEarthBtn = document.getElementById("call-earth-btn");
