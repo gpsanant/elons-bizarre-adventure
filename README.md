@@ -36,7 +36,20 @@ You can also click adjacent tiles to move and use the sidebar buttons.
 
 ## Deployment
 
-The game is deployed as a static site. Two deployment methods are available:
+The browser-playable version auto-updates whenever a pull request is merged to `main`. No manual deployment steps are required for routine code changes.
+
+### Automatic Deployment (CI/CD)
+
+A GitHub Actions workflow (`.github/workflows/deploy.yml`) handles continuous deployment:
+
+1. A pull request is opened and reviewed. The CI workflow (`.github/workflows/ci.yml`) validates the Docker build on every PR.
+2. Once the PR is merged to `main`, the deploy workflow triggers automatically.
+3. The workflow builds a Docker image tagged with the commit SHA, pushes it to the Fly.io registry, and triggers a deploy.
+4. Concurrency control ensures only one deployment runs at a time, preventing conflicts.
+
+Players accessing the [browser version](https://playable-in-browser-app-phbfmyvl.devinapps.com) will always see the latest code from `main` without any manual intervention.
+
+> **Note:** Changes that only modify files under `.github/` are excluded from triggering a deploy, since they do not affect the game itself.
 
 ### GitHub Pages (optional)
 
@@ -48,9 +61,9 @@ Since the game is plain HTML/CSS/JS, it can also be deployed via GitHub Pages:
 
 The game will be accessible at `https://<owner>.github.io/elons-bizarre-adventure/`.
 
-### Manual (Docker)
+### Local Development (Docker)
 
-You can also serve the game via Docker:
+You can also serve the game locally via Docker:
 
 ```bash
 docker build -t elons-bizarre-adventure .
