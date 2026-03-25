@@ -64,3 +64,10 @@
 - **quality_checklist**: 4 items verified (q1, q2, q3, q4 — all pass)
 - **Reviews**: code quality (1 issue investigated: AC3 movesLeft concern is spec wording imprecision, not a code bug — gatherResource() is a free action that doesn't consume moves), error handling (clean), test coverage (adequate — no test infra project-wide)
 - **Outcome**: success / exit_signal: true
+
+## conflict-resolver — 2026-03-25T19:37:50Z
+
+- **Conflict**: index.html (1 conflict region) — upstream added "Call Earth" button, branch added "no-actions-msg" div
+- **Resolution**: Kept both additions — "Call Earth" button and "no-actions-msg" div placed sequentially in the actions panel
+- **Tests run**: none found — no automated test suite exists
+- **Outcome**: success
