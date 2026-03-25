@@ -1,0 +1,145 @@
+{
+  "quality": "full",
+  "tasks": [
+    {
+      "id": "main",
+      "title": "Add health stat to all unit types",
+      "description": "Add maxHealth to the UNIT_TYPES registry (Elon=100, Rocktimus=50), propagate health and maxHealth through createUnit(), and display health in the sidebar unit info panel.",
+      "acceptance_criteria": "1. UNIT_TYPES has maxHealth field: elon=100, rocktimus=50.\n2. createUnit() returns objects with both health and maxHealth set from the type definition.\n3. The #unit-info panel shows 'Health: X/Y' for the selected unit.\n4. Health values initialize correctly for all unit instances.\n5. No combat or damage mechanics added.\n6. Pattern is clear for future unit types to follow.",
+      "claudeMd": "# Project Context\n\nYou are adding a health stat to a vanilla HTML/CSS/JS browser game. There is NO build system, NO package manager, NO framework. The entire game engine lives in `game.js` (~1400 lines). UI is in `index.html`, styles in `style.css`.\n\n## Conventions (MUST follow)\n- Use `var` declarations (the codebase uses `var` everywhere, not `let`/`const` — except for top-level constants which use `const`)\n- DOM manipulation via `document.getElementById()`\n- No semicolons are omitted — always use semicolons\n- Match existing indentation: 4 spaces inside the IIFE, 8 spaces inside functions\n- Unit properties follow the pattern: `movesLeft`/`movesMax` for mutable/max pairs\n\n## Files to Change\n\n### 1. `game.js` — UNIT_TYPES registry (lines 35–52)\nAdd `maxHealth: 100` to `elon` and `maxHealth: 50` to `rocktimus` entries. Place it as the last property in each object.\n\n### 2. `game.js` — createUnit() function (lines 54–65)\nAdd two properties to the returned object:\n```js\nhealth: def.maxHealth,\nmaxHealth: def.maxHealth,\n```\nPlace them after `turnsRemaining`.\n\n### 3. `index.html` — unit info panel (after line 24, the #unit-moves div)\nAdd between #unit-moves and #unit-lifespan:\n```html\n<div id=\"unit-health\">Health: <span id=\"health-current\">100</span> / <span id=\"health-max\">100</span></div>\n```\n\n### 4. `game.js` — updateUI() function (around line 765)\nAfter the moves-max update, add:\n```js\ndocument.getElementById(\"health-current\").textContent = unit.health;\ndocument.getElementById(\"health-max\").textContent = unit.maxHealth;\n```\n\n### 5. `style.css` — health display styling\nAdd after the `#unit-moves` rule (around line 116):\n```css\n#unit-health {\n    color: #cc4444;\n    font-size: 0.85rem;\n    margin-top: 2px;\n}\n```\nThis matches the pattern of `#unit-moves` and `#unit-lifespan` styles.\n\n## Gotchas\n- The entire game.js is wrapped in an IIFE `(function() { ... })()`. All edits are inside this scope.\n- `UNIT_TYPES` uses `const` but the unit objects returned by `createUnit` are plain mutable objects.\n- The `updateUI()` function runs on every state change — make sure to always update both health spans.\n- Do NOT add combat/damage mechanics. This is data plumbing only.\n- Do NOT modify `.github/workflows/` — pushes touching that path will be rejected.",
+      "checklist": [
+        {
+          "id": "t1",
+          "description": "Add maxHealth field to elon entry in UNIT_TYPES",
+          "steps": [
+            "Open game.js and locate the UNIT_TYPES object (line 35)",
+            "Add `maxHealth: 100` as the last property of the elon entry",
+            "Verify the comma-separated syntax is correct"
+          ],
+          "passes": false
+        },
+        {
+          "id": "t2",
+          "description": "Add maxHealth field to rocktimus entry in UNIT_TYPES",
+          "steps": [
+            "Locate the rocktimus entry in UNIT_TYPES (line 44)",
+            "Add `maxHealth: 50` as the last property",
+            "Verify the comma-separated syntax is correct"
+          ],
+          "passes": false
+        },
+        {
+          "id": "t3",
+          "description": "Propagate health and maxHealth in createUnit()",
+          "steps": [
+            "Locate createUnit() function (line 54)",
+            "Add `health: def.maxHealth,` and `maxHealth: def.maxHealth,` to the returned object after turnsRemaining",
+            "Verify the object literal syntax is correct"
+          ],
+          "passes": false
+        },
+        {
+          "id": "t4",
+          "description": "Add health display HTML to unit info panel",
+          "steps": [
+            "Open index.html and locate the #unit-info panel",
+            "Add a #unit-health div between #unit-moves and #unit-lifespan with spans for health-current and health-max",
+            "Verify the HTML is well-formed"
+          ],
+          "passes": false
+        },
+        {
+          "id": "t5",
+          "description": "Update health display in updateUI() function",
+          "steps": [
+            "Locate updateUI() in game.js (around line 760)",
+            "After the moves-max update line, add lines to set health-current and health-max textContent from unit.health and unit.maxHealth",
+            "Verify the DOM IDs match the HTML"
+          ],
+          "passes": false
+        },
+        {
+          "id": "t6",
+          "description": "Add CSS styling for #unit-health",
+          "steps": [
+            "Open style.css and locate the #unit-moves rule (around line 112)",
+            "Add a #unit-health rule after #unit-lifespan with color: #cc4444, font-size: 0.85rem, margin-top: 2px",
+            "Verify it matches the visual pattern of adjacent rules"
+          ],
+          "passes": false
+        }
+      ],
+      "quality_checklist": [
+        {
+          "id": "q1",
+          "description": "Health field naming is consistent across all locations",
+          "steps": [
+            "Grep for 'maxHealth' and 'health' in game.js — verify naming matches the movesLeft/movesMax pattern",
+            "Verify HTML span IDs (health-current, health-max) are referenced correctly in JS"
+          ],
+          "passes": false
+        },
+        {
+          "id": "q2",
+          "description": "No dead code or unnecessary additions",
+          "steps": [
+            "Verify no extra functions, event listeners, or unused variables were added",
+            "Confirm no combat/damage logic was introduced",
+            "Check that only the minimum required lines were added"
+          ],
+          "passes": false
+        },
+        {
+          "id": "q3",
+          "description": "Style consistency with existing codebase",
+          "steps": [
+            "Verify var vs const usage matches existing patterns",
+            "Check indentation matches surrounding code (4-space base, 8-space inside functions)",
+            "Confirm CSS rule follows the same structure as #unit-moves and #unit-lifespan"
+          ],
+          "passes": false
+        }
+      ]
+    }
+  ],
+  "integration": null,
+  "verification": {
+    "buildCommand": "docker build -t elons-bizarre-adventure /home/user/workspace-320252be-planner-bab3c10d",
+    "runCommand": "docker run -d -p 8080:8080 --name eba-test elons-bizarre-adventure",
+    "readySignal": "start worker process",
+    "appType": "web",
+    "port": 8080,
+    "checks": [
+      {
+        "id": "v1",
+        "description": "Unit info panel displays health for Elon Musk on page load",
+        "steps": [
+          "Open http://localhost:8080 in a browser or fetch the page",
+          "Verify the #unit-info panel contains a #unit-health element",
+          "Verify it shows 'Health: 100 / 100' for the initially selected Elon unit"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v2",
+        "description": "Health updates when switching to a Rocktimus unit",
+        "steps": [
+          "Build a Rocktimus Robot in-game (requires 2 energy + 1 rock)",
+          "Press Tab to cycle to the Rocktimus unit",
+          "Verify the health display changes to 'Health: 50 / 50'"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v3",
+        "description": "HTML page loads without JavaScript errors",
+        "steps": [
+          "Open browser dev tools console",
+          "Load http://localhost:8080",
+          "Verify no JavaScript errors appear in the console"
+        ],
+        "passes": false
+      }
+    ]
+  }
+}
