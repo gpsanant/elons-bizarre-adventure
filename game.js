@@ -887,12 +887,26 @@
     }
 
     function processSubparBatteryExplosions() {
+        var anyExploded = false;
         for (var i = state.structures.length - 1; i >= 0; i--) {
             var s = state.structures[i];
             if (s.type !== "subpar_battery") continue;
             if (Math.random() < 0.02) {
                 addLog("A Subpar Battery at (" + s.col + ", " + s.row + ") exploded!", "explosion");
                 state.structures.splice(i, 1);
+                anyExploded = true;
+            }
+        }
+        // Clamp hovel energy to new capacity after explosions
+        if (anyExploded) {
+            for (var j = 0; j < state.structures.length; j++) {
+                var h = state.structures[j];
+                if (h.type !== "rock_hovel") continue;
+                var cap = getHovelCapacity(h);
+                if (h.energy > cap) {
+                    state.resources.energy -= (h.energy - cap);
+                    h.energy = cap;
+                }
             }
         }
     }
