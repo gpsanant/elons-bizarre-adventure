@@ -82,8 +82,22 @@
         hotkeyModalOpen: false,
     };
 
+    function refreshView() {
+        render();
+        updateUI();
+    }
+
     function getSelectedUnit() {
         return state.units[state.selectedUnit];
+    }
+
+    function isInBounds(row, col) {
+        return row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS;
+    }
+
+    function canUnitHarvest(unit) {
+        var tile = state.map[unit.row][unit.col];
+        return tile.resource && UNIT_TYPES[unit.type].canHarvest.includes(tile.resource);
     }
 
     function getUnitAt(row, col) {
@@ -495,7 +509,7 @@
                     var nr = current.row + dr;
                     var nc = current.col + dc;
                     var key = nr + "," + nc;
-                    if (nr >= 0 && nr < MAP_ROWS && nc >= 0 && nc < MAP_COLS && !visited[key]) {
+                    if (isInBounds(nr, nc) && !visited[key]) {
                         visited[key] = true;
                         queue.push({ row: nr, col: nc, dist: current.dist + 1 });
                     }
@@ -589,11 +603,9 @@
             }
         }
 
-        // Gather button — use generalized canHarvest
+        // Gather button
         const gatherBtn = document.getElementById("gather-btn");
-        const unitTile = state.map[unit.row][unit.col];
-        var canHarvest = unitTile.resource && UNIT_TYPES[unit.type].canHarvest.includes(unitTile.resource);
-        gatherBtn.disabled = !canHarvest;
+        gatherBtn.disabled = !canUnitHarvest(unit);
 
         // Build Rock Hovel button
         var buildBtn = document.getElementById("build-hovel-btn");
@@ -610,9 +622,7 @@
 
         // Build Rocktimus button
         var rocktimusBtn = document.getElementById("build-rocktimus-btn");
-        if (rocktimusBtn) {
-            rocktimusBtn.disabled = !canBuildRocktimus();
-        }
+        rocktimusBtn.disabled = !canBuildRocktimus();
 
         // Tile info
         updateTileInfo();
@@ -681,8 +691,7 @@
         // Must be adjacent (including diagonal)
         if (dr > 1 || dc > 1 || (dr === 0 && dc === 0)) return;
 
-        // Bounds check
-        if (targetRow < 0 || targetRow >= MAP_ROWS || targetCol < 0 || targetCol >= MAP_COLS) return;
+        if (!isInBounds(targetRow, targetCol)) return;
 
         // Cannot move onto a tile occupied by another unit
         if (getUnitAt(targetRow, targetCol)) return;
@@ -694,15 +703,13 @@
         addLog(unit.name + " moved to (" + targetCol + ", " + targetRow + ")", "move");
 
         state.selectedTile = state.map[targetRow][targetCol];
-        render();
-        updateUI();
+        refreshView();
     }
 
     function gatherResource() {
         var unit = getSelectedUnit();
+        if (!canUnitHarvest(unit)) return;
         const tile = state.map[unit.row][unit.col];
-        var canHarvest = tile.resource && UNIT_TYPES[unit.type].canHarvest.includes(tile.resource);
-        if (!canHarvest) return;
 
         if (tile.resource === "rocks") {
             tile.resource = null;
@@ -710,8 +717,7 @@
             addLog(unit.name + " gathered Rocks! (Total: " + state.resources.rocks + ")", "gather");
         }
 
-        render();
-        updateUI();
+        refreshView();
     }
 
     function getStructureAt(row, col) {
@@ -738,8 +744,7 @@
 
         addLog(unit.name + " built a Rock Hovel at (" + unit.col + ", " + unit.row + ")", "build");
 
-        render();
-        updateUI();
+        refreshView();
     }
 
     function getAdjacentStructures(row, col, type) {
@@ -749,7 +754,7 @@
                 if (dr === 0 && dc === 0) continue;
                 var nr = row + dr;
                 var nc = col + dc;
-                if (nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS) continue;
+                if (!isInBounds(nr, nc)) continue;
                 var s = getStructureAt(nr, nc);
                 if (s && s.type === type) results.push(s);
             }
@@ -797,8 +802,7 @@
 
         addLog(unit.name + " built a Solar Panel at (" + unit.col + ", " + unit.row + ")", "build");
 
-        render();
-        updateUI();
+        refreshView();
     }
 
     function canBuildSubparBattery() {
@@ -835,7 +839,7 @@
                 if (dr === 0 && dc === 0) continue;
                 var nr = row + dr;
                 var nc = col + dc;
-                if (nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS) continue;
+                if (!isInBounds(nr, nc)) continue;
                 if (getUnitAt(nr, nc)) continue;
                 if (getStructureAt(nr, nc)) continue;
                 return { row: nr, col: nc };
@@ -867,8 +871,7 @@
 
         addLog(unit.name + " constructed a Rocktimus Robot at (" + openTile.col + ", " + openTile.row + ")", "construct");
 
-        render();
-        updateUI();
+        refreshView();
     }
 
     // --------------- Solar Panels ---------------
@@ -1129,8 +1132,7 @@
         processSolarPanels();
         processDustStorms();
 
-        render();
-        updateUI();
+        refreshView();
     }
 
     function toggleHotkeyModal() {
@@ -1145,7 +1147,7 @@
         const y = e.clientY - rect.top;
         const col = Math.floor(x / TILE_SIZE);
         const row = Math.floor(y / TILE_SIZE);
-        if (row >= 0 && row < MAP_ROWS && col >= 0 && col < MAP_COLS) {
+        if (isInBounds(row, col)) {
             return state.map[row][col];
         }
         return null;
@@ -1162,8 +1164,7 @@
             if (idx !== -1) {
                 state.selectedUnit = idx;
                 state.selectedTile = tile;
-                render();
-                updateUI();
+                refreshView();
                 return;
             }
         }
@@ -1178,8 +1179,7 @@
         } else {
             // Just select the tile
             state.selectedTile = tile;
-            render();
-            updateUI();
+            refreshView();
         }
     });
 
@@ -1261,8 +1261,7 @@
                     state.selectedUnit = (state.selectedUnit + 1) % state.units.length;
                     var sel = getSelectedUnit();
                     state.selectedTile = state.map[sel.row][sel.col];
-                    render();
-                    updateUI();
+                    refreshView();
                 }
                 return;
             case "Enter":
@@ -1299,8 +1298,7 @@
         resizeCanvas();
         addLog("Elon has crash-landed on Mars!", "turn");
         addLog("--- Turn 1 ---", "turn");
-        render();
-        updateUI();
+        refreshView();
     }
 
     init();
