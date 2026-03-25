@@ -182,6 +182,14 @@ header .subtitle {
     font-weight: bold;
 }
 
+#game-log .log-entry.build {
+    color: #d4a574;
+}
+
+#action-panel .action-btn + .action-btn {
+    margin-top: 6px;
+}
+
 #map-wrapper {
     flex: 1;
     display: flex;

@@ -32,6 +32,7 @@
         unit: null,
         turn: 1,
         resources: { rocks: 0 },
+        structures: [],
         selectedTile: null,
         logs: [],
         hotkeyModalOpen: false,
@@ -119,6 +120,47 @@
         ctx.fill();
     }
 
+    function drawStructure(structure) {
+        const x = structure.col * TILE_SIZE;
+        const y = structure.row * TILE_SIZE;
+
+        // Stone base
+        ctx.fillStyle = "#6b5b4f";
+        ctx.beginPath();
+        ctx.moveTo(x + 6, y + TILE_SIZE - 6);
+        ctx.lineTo(x + TILE_SIZE - 6, y + TILE_SIZE - 6);
+        ctx.lineTo(x + TILE_SIZE - 8, y + 14);
+        ctx.lineTo(x + 8, y + 14);
+        ctx.closePath();
+        ctx.fill();
+
+        // Darker stone outline
+        ctx.strokeStyle = "#4a3c33";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Roof (triangle)
+        ctx.fillStyle = "#8b7355";
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 16);
+        ctx.lineTo(x + TILE_SIZE - 4, y + 16);
+        ctx.lineTo(x + TILE_SIZE / 2, y + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#5a4a3a";
+        ctx.stroke();
+
+        // Door
+        ctx.fillStyle = "#2a1a0a";
+        ctx.fillRect(x + TILE_SIZE / 2 - 3, y + TILE_SIZE - 12, 6, 6);
+
+        // Label
+        ctx.fillStyle = "#d4a574";
+        ctx.font = "bold 7px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("HOVEL", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
+    }
+
     function drawUnit(unit) {
         const x = unit.col * TILE_SIZE;
         const y = unit.row * TILE_SIZE;
@@ -194,6 +236,11 @@
             }
         }
 
+        // Draw structures
+        for (var i = 0; i < state.structures.length; i++) {
+            drawStructure(state.structures[i]);
+        }
+
         // Draw movement range
         drawMoveRange(state.unit);
 
@@ -218,6 +265,11 @@
         const unitTile = state.map[state.unit.row][state.unit.col];
         gatherBtn.disabled = !(unitTile.resource === "rocks");
 
+        // Build Rock Hovel button
+        var buildBtn = document.getElementById("build-hovel-btn");
+        var hasStructureOnTile = getStructureAt(state.unit.row, state.unit.col) !== null;
+        buildBtn.disabled = state.resources.rocks < 10 || hasStructureOnTile;
+
         // Tile info
         updateTileInfo();
     }
@@ -232,10 +284,13 @@
         const terrainName = tile.terrain.charAt(0).toUpperCase() + tile.terrain.slice(1);
         const resourceText = tile.resource ? "Rocks" : "None";
         const hasUnit = tile.row === state.unit.row && tile.col === state.unit.col;
+        var tileStructure = getStructureAt(tile.row, tile.col);
+        var structureText = tileStructure ? "Rock Hovel" : "None";
         el.innerHTML = `
             <div><strong>Terrain:</strong> ${terrainName}</div>
             <div><strong>Position:</strong> (${tile.col}, ${tile.row})</div>
             <div><strong>Resource:</strong> ${resourceText}</div>
+            <div><strong>Structure:</strong> ${structureText}</div>
             ${hasUnit ? '<div><strong>Unit:</strong> Elon Musk</div>' : ""}
         `;
     }
@@ -291,6 +346,33 @@
         updateUI();
     }
 
+    function getStructureAt(row, col) {
+        for (var i = 0; i < state.structures.length; i++) {
+            if (state.structures[i].row === row && state.structures[i].col === col) {
+                return state.structures[i];
+            }
+        }
+        return null;
+    }
+
+    function buildRockHovel() {
+        if (state.resources.rocks < 10) return;
+        var unit = state.unit;
+        if (getStructureAt(unit.row, unit.col) !== null) return;
+
+        state.resources.rocks -= 10;
+        state.structures.push({
+            type: "rock_hovel",
+            row: unit.row,
+            col: unit.col,
+        });
+
+        addLog("Elon built a Rock Hovel at (" + unit.col + ", " + unit.row + ")", "build");
+
+        render();
+        updateUI();
+    }
+
     function endTurn() {
         state.turn++;
         state.unit.movesLeft = state.unit.movesMax;
@@ -340,6 +422,7 @@
 
     document.getElementById("end-turn-btn").addEventListener("click", endTurn);
     document.getElementById("gather-btn").addEventListener("click", gatherResource);
+    document.getElementById("build-hovel-btn").addEventListener("click", buildRockHovel);
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -378,6 +461,9 @@
             case "g":
                 gatherResource();
                 return;
+            case "b":
+                buildRockHovel();
+                return;
             case "Enter":
             case "e":
                 endTurn();
@@ -396,6 +482,7 @@
         state.unit = placeUnit(state.map);
         state.turn = 1;
         state.resources = { rocks: 0 };
+        state.structures = [];
         state.logs = [];
         state.selectedTile = state.map[state.unit.row][state.unit.col];
 
