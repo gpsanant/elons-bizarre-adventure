@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elon's Bizarre Adventure - Mars Colony</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>Elon's Bizarre Adventure</h1>
+            <p class="subtitle">Crash-landed on Mars. Survive. Build. Conquer.</p>
+        </header>
+        <div id="game-container">
+            <div id="sidebar">
+                <div id="turn-info" class="panel">
+                    <h2>Turn <span id="turn-number">1</span></h2>
+                    <button id="end-turn-btn">End Turn</button>
+                </div>
+                <div id="unit-info" class="panel">
+                    <h2>Unit</h2>
+                    <div id="unit-name">Elon Musk</div>
+                    <div id="unit-moves">Moves: <span id="moves-left">2</span> / <span id="moves-max">2</span></div>
+                </div>
+                <div id="resources-panel" class="panel">
+                    <h2>Resources</h2>
+                    <div class="resource-row">
+                        <span class="resource-icon">&#x1FAA8;</span>
+                        <span>Rocks: <span id="rocks-count">0</span></span>
+                    </div>
+                </div>
+                <div id="tile-info" class="panel">
+                    <h2>Selected Tile</h2>
+                    <div id="tile-details">Click a tile to inspect</div>
+                </div>
+                <div id="action-panel" class="panel">
+                    <h2>Actions</h2>
+                    <button id="gather-btn" class="action-btn" disabled>Gather Resource</button>
+                </div>
+                <div id="log-panel" class="panel">
+                    <h2>Log</h2>
+                    <div id="game-log"></div>
+                </div>
+            </div>
+            <div id="map-wrapper">
+                <canvas id="game-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
