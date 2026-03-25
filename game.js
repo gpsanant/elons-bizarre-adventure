@@ -222,6 +222,54 @@
         ctx.fillText("BATTERY", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
     }
 
+    function drawCommDish(structure) {
+        var x = structure.col * TILE_SIZE;
+        var y = structure.row * TILE_SIZE;
+
+        // Base platform (dark gray)
+        ctx.fillStyle = "#3a3a4a";
+        ctx.fillRect(x + 10, y + TILE_SIZE - 12, TILE_SIZE - 20, 6);
+
+        // Support pole
+        ctx.fillStyle = "#666677";
+        ctx.fillRect(x + TILE_SIZE / 2 - 2, y + 10, 4, TILE_SIZE - 22);
+
+        // Dish (arc)
+        ctx.fillStyle = "#8899bb";
+        ctx.beginPath();
+        ctx.ellipse(x + TILE_SIZE / 2, y + 12, 12, 7, 0, Math.PI, 0);
+        ctx.fill();
+
+        // Dish inner
+        ctx.fillStyle = "#aabbdd";
+        ctx.beginPath();
+        ctx.ellipse(x + TILE_SIZE / 2, y + 13, 9, 5, 0, Math.PI, 0);
+        ctx.fill();
+
+        // Feed horn (small line from dish center upward)
+        ctx.strokeStyle = "#ccddff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + TILE_SIZE / 2, y + 12);
+        ctx.lineTo(x + TILE_SIZE / 2 + 6, y + 4);
+        ctx.stroke();
+
+        // Signal dot
+        ctx.fillStyle = "#00ffcc";
+        drawCircle(x + TILE_SIZE / 2 + 6, y + 4, 2);
+
+        // Frame outline
+        ctx.strokeStyle = "#556688";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 4, y + 2, TILE_SIZE - 8, TILE_SIZE - 6);
+
+        // Label
+        ctx.fillStyle = "#88ccff";
+        ctx.font = "bold 6px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("COMM", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
+    }
+
     function drawStructure(structure) {
         if (structure.type === "solar_panel") {
             drawSolarPanel(structure);
@@ -229,6 +277,10 @@
         }
         if (structure.type === "subpar_battery") {
             drawSubparBattery(structure);
+            return;
+        }
+        if (structure.type === "comm_dish") {
+            drawCommDish(structure);
             return;
         }
         var x = structure.col * TILE_SIZE;
@@ -533,6 +585,59 @@
         }
     }
 
+    function getCommDishRevealedTiles() {
+        var revealed = {};
+        for (var i = 0; i < state.structures.length; i++) {
+            var s = state.structures[i];
+            if (s.type !== "comm_dish") continue;
+            // BFS from the comm dish up to 5 tiles
+            var visited = {};
+            var queue = [{ row: s.row, col: s.col, dist: 0 }];
+            visited[s.row + "," + s.col] = true;
+            while (queue.length > 0) {
+                var current = queue.shift();
+                // Check if this tile has rocks
+                if (isInBounds(current.row, current.col)) {
+                    var tile = state.map[current.row][current.col];
+                    if (tile.resource === "rocks") {
+                        revealed[current.row + "," + current.col] = true;
+                    }
+                }
+                if (current.dist >= 5) continue;
+                for (var dr = -1; dr <= 1; dr++) {
+                    for (var dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        var nr = current.row + dr;
+                        var nc = current.col + dc;
+                        var key = nr + "," + nc;
+                        if (isInBounds(nr, nc) && !visited[key]) {
+                            visited[key] = true;
+                            queue.push({ row: nr, col: nc, dist: current.dist + 1 });
+                        }
+                    }
+                }
+            }
+        }
+        return revealed;
+    }
+
+    function drawCommDishOverlay(revealedTiles) {
+        for (var key in revealedTiles) {
+            var parts = key.split(",");
+            var r = parseInt(parts[0], 10);
+            var c = parseInt(parts[1], 10);
+            var tx = c * TILE_SIZE;
+            var ty = r * TILE_SIZE;
+            // Subtle cyan border overlay
+            ctx.strokeStyle = "rgba(0, 255, 220, 0.45)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(tx + 1, ty + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+            // Faint fill
+            ctx.fillStyle = "rgba(0, 255, 220, 0.08)";
+            ctx.fillRect(tx, ty, TILE_SIZE, TILE_SIZE);
+        }
+    }
+
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -542,6 +647,10 @@
                 drawTile(state.map[row][col]);
             }
         }
+
+        // Draw Comm Dish rock reveal overlay
+        var revealedTiles = getCommDishRevealedTiles();
+        drawCommDishOverlay(revealedTiles);
 
         // Draw structures
         for (var i = 0; i < state.structures.length; i++) {
@@ -624,6 +733,10 @@
         var rocktimusBtn = document.getElementById("build-rocktimus-btn");
         rocktimusBtn.disabled = !canBuildRocktimus();
 
+        // Build Comm Dish button
+        var commDishBtn = document.getElementById("build-comm-dish-btn");
+        commDishBtn.disabled = !canBuildCommDish();
+
         // Tile info
         updateTileInfo();
     }
@@ -649,6 +762,8 @@
                 structureText = "Solar Panel";
             } else if (tileStructure.type === "subpar_battery") {
                 structureText = "Subpar Battery";
+            } else if (tileStructure.type === "comm_dish") {
+                structureText = "Comm Dish";
             }
         }
         // Dust storm info
@@ -900,6 +1015,43 @@
         state.units.push(robot);
 
         addLog(unit.name + " constructed a Rocktimus Robot at (" + openTile.col + ", " + openTile.row + ")", "construct");
+
+        refreshView();
+    }
+
+    // --------------- Comm Dish Construction ---------------
+    function canBuildCommDish() {
+        var unit = getSelectedUnit();
+        if (state.resources.rocks < 10) return false;
+        if (getTotalHovelEnergy() < 10) return false;
+        if (getStructureAt(unit.row, unit.col) !== null) return false;
+        return true;
+    }
+
+    function buildCommDish() {
+        if (!canBuildCommDish()) return;
+        var unit = getSelectedUnit();
+
+        state.resources.rocks -= 10;
+
+        // Deduct 10 energy distributed across hovels in order
+        var energyToSpend = 10;
+        for (var i = 0; i < state.structures.length; i++) {
+            if (energyToSpend <= 0) break;
+            var s = state.structures[i];
+            if (s.type !== "rock_hovel") continue;
+            var drain = Math.min(s.energy, energyToSpend);
+            s.energy -= drain;
+            energyToSpend -= drain;
+        }
+
+        state.structures.push({
+            type: "comm_dish",
+            row: unit.row,
+            col: unit.col,
+        });
+
+        addLog(unit.name + " built a Comm Dish at (" + unit.col + ", " + unit.row + ")", "build");
 
         refreshView();
     }
@@ -1244,6 +1396,10 @@
         if (state.gameOver) return;
         buildRocktimus();
     });
+    document.getElementById("build-comm-dish-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        buildCommDish();
+    });
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -1294,6 +1450,9 @@
                 return;
             case "r":
                 buildRocktimus();
+                return;
+            case "c":
+                buildCommDish();
                 return;
             case "Tab":
                 e.preventDefault();
