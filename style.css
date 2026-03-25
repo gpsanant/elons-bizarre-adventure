@@ -190,6 +190,11 @@ header .subtitle {
     color: #ffdd44;
 }
 
+#game-log .log-entry.storm {
+    color: #d4a060;
+    font-weight: bold;
+}
+
 #action-panel .action-btn + .action-btn {
     margin-top: 6px;
 }

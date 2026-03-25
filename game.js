@@ -26,6 +26,12 @@
         [TERRAIN.CRATER]: ["#654321", "#5A3A1C", "#704C26"],
     };
 
+    // --------------- Dust Storm Configuration ---------------
+    const DUST_STORM_LENGTH = 5;
+    const DUST_STORM_FIRST_MAX_TURN = 10;
+    const DUST_STORM_INTERVAL_MIN = 8;
+    const DUST_STORM_INTERVAL_MAX = 15;
+
     // --------------- State ---------------
     const state = {
         map: [],
@@ -33,6 +39,11 @@
         turn: 1,
         resources: { rocks: 0, energy: 0 },
         structures: [],
+        robots: [],
+        dustStorms: [],
+        nextStormTurn: 0,
+        dustStormIdCounter: 0,
+        gameOver: false,
         selectedTile: null,
         logs: [],
         hotkeyModalOpen: false,
@@ -230,6 +241,33 @@
         const cx = x + TILE_SIZE / 2;
         const cy = y + TILE_SIZE / 2;
 
+        if (unit.name === "Elon Bones") {
+            // Draw bones (game over state)
+            ctx.fillStyle = "#ccccaa";
+            // Skull
+            drawCircle(cx, cy - 6, 7);
+            ctx.fillStyle = "#1a0a0a";
+            drawCircle(cx - 3, cy - 7, 2);
+            drawCircle(cx + 3, cy - 7, 2);
+            // Crossbones
+            ctx.strokeStyle = "#ccccaa";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(cx - 10, cy + 2);
+            ctx.lineTo(cx + 10, cy + 14);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(cx + 10, cy + 2);
+            ctx.lineTo(cx - 10, cy + 14);
+            ctx.stroke();
+            // Label
+            ctx.fillStyle = "#aa8866";
+            ctx.font = "bold 7px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("BONES", cx, y + TILE_SIZE - 2);
+            return;
+        }
+
         // Spacesuit body
         ctx.fillStyle = "#dddddd";
         ctx.beginPath();
@@ -253,6 +291,73 @@
         ctx.font = "bold 9px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("ELON", cx, y + TILE_SIZE - 2);
+    }
+
+    function drawRobot(robot) {
+        var x = robot.col * TILE_SIZE;
+        var y = robot.row * TILE_SIZE;
+        var cx = x + TILE_SIZE / 2;
+        var cy = y + TILE_SIZE / 2;
+
+        // Robot body
+        ctx.fillStyle = "#8888aa";
+        ctx.fillRect(cx - 8, cy - 2, 16, 14);
+
+        // Robot head
+        ctx.fillStyle = "#9999bb";
+        ctx.fillRect(cx - 6, cy - 10, 12, 10);
+
+        // Eyes
+        ctx.fillStyle = "#ff3333";
+        drawCircle(cx - 3, cy - 6, 2);
+        drawCircle(cx + 3, cy - 6, 2);
+
+        // Label
+        ctx.fillStyle = "#aaaacc";
+        ctx.font = "bold 6px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("ROBO", cx, y + TILE_SIZE - 2);
+    }
+
+    // --------------- Dust Storm Rendering ---------------
+    function drawDustStorm(storm) {
+        for (var i = 0; i < storm.tiles.length; i++) {
+            var tile = storm.tiles[i];
+            // Only draw tiles that are on the map
+            if (tile.row < 0 || tile.row >= MAP_ROWS || tile.col < 0 || tile.col >= MAP_COLS) continue;
+
+            var x = tile.col * TILE_SIZE;
+            var y = tile.row * TILE_SIZE;
+
+            // Dust overlay
+            ctx.fillStyle = "rgba(210, 180, 120, 0.45)";
+            ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+            // Swirling dust particles
+            ctx.fillStyle = "rgba(180, 150, 90, 0.7)";
+            var seed = (storm.id * 7 + i * 13 + state.turn * 3) % 100;
+            for (var p = 0; p < 6; p++) {
+                var px = x + ((seed + p * 17) % TILE_SIZE);
+                var py = y + ((seed + p * 23) % TILE_SIZE);
+                var pr = 1.5 + (p % 3);
+                drawCircle(px, py, pr);
+            }
+
+            // Swirl lines
+            ctx.strokeStyle = "rgba(200, 170, 100, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 10, 0, Math.PI * 1.5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(x + TILE_SIZE / 2 + 4, y + TILE_SIZE / 2 - 4, 6, Math.PI * 0.5, Math.PI * 2);
+            ctx.stroke();
+
+            // Storm border
+            ctx.strokeStyle = "rgba(210, 160, 80, 0.6)";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+        }
     }
 
     function drawHighlight(tile, color) {
@@ -298,8 +403,20 @@
             drawStructure(state.structures[i]);
         }
 
+        // Draw dust storms
+        for (var s = 0; s < state.dustStorms.length; s++) {
+            drawDustStorm(state.dustStorms[s]);
+        }
+
+        // Draw robots
+        for (var r = 0; r < state.robots.length; r++) {
+            drawRobot(state.robots[r]);
+        }
+
         // Draw movement range
-        drawMoveRange(state.unit);
+        if (!state.gameOver) {
+            drawMoveRange(state.unit);
+        }
 
         // Draw unit
         drawUnit(state.unit);
@@ -357,13 +474,25 @@
                 structureText = "Solar Panel";
             }
         }
+        // Dust storm info
+        var stormInfo = getDustStormAt(tile.row, tile.col);
+        var stormText = "";
+        if (stormInfo) {
+            var dirLabel = stormInfo.direction.charAt(0).toUpperCase() + stormInfo.direction.slice(1);
+            stormText = '<div><strong>Dust Storm:</strong> Moving ' + dirLabel + '</div>';
+        }
+        // Robot on tile
+        var robotOnTile = getRobotAt(tile.row, tile.col);
+        var robotText = robotOnTile ? '<div><strong>Unit:</strong> Rocktimus Robot</div>' : "";
         el.innerHTML = `
             <div><strong>Terrain:</strong> ${terrainName}</div>
             <div><strong>Position:</strong> (${tile.col}, ${tile.row})</div>
             <div><strong>Resource:</strong> ${resourceText}</div>
             <div><strong>Structure:</strong> ${structureText}</div>
             ${energyText}
-            ${hasUnit ? '<div><strong>Unit:</strong> Elon Musk</div>' : ""}
+            ${stormText}
+            ${hasUnit ? '<div><strong>Unit:</strong> ' + state.unit.name + '</div>' : ""}
+            ${robotText}
         `;
     }
 
@@ -382,6 +511,7 @@
 
     // --------------- Game Actions ---------------
     function moveUnit(targetRow, targetCol) {
+        if (state.gameOver) return;
         const unit = state.unit;
         if (unit.movesLeft <= 0) return;
 
@@ -512,13 +642,188 @@
         }
     }
 
+    // --------------- Dust Storm Logic ---------------
+    function isUnitInHovel(row, col) {
+        var structure = getStructureAt(row, col);
+        return structure !== null && structure.type === "rock_hovel";
+    }
+
+    function getDustStormAt(row, col) {
+        for (var i = 0; i < state.dustStorms.length; i++) {
+            var storm = state.dustStorms[i];
+            for (var j = 0; j < storm.tiles.length; j++) {
+                if (storm.tiles[j].row === row && storm.tiles[j].col === col) {
+                    return storm;
+                }
+            }
+        }
+        return null;
+    }
+
+    function getRobotAt(row, col) {
+        for (var i = 0; i < state.robots.length; i++) {
+            if (state.robots[i].row === row && state.robots[i].col === col) {
+                return state.robots[i];
+            }
+        }
+        return null;
+    }
+
+    function spawnDustStorm() {
+        // Pick a random edge and direction
+        // 0=north edge moving south, 1=south edge moving north,
+        // 2=west edge moving east, 3=east edge moving west
+        var edge = Math.floor(Math.random() * 4);
+        var storm = {
+            id: state.dustStormIdCounter++,
+            tiles: [],
+            direction: "",
+        };
+
+        if (edge === 0) {
+            // Spawns on top edge (row 0), moves south
+            storm.direction = "south";
+            var startCol = Math.floor(Math.random() * (MAP_COLS - DUST_STORM_LENGTH + 1));
+            for (var i = 0; i < DUST_STORM_LENGTH; i++) {
+                storm.tiles.push({ row: 0, col: startCol + i });
+            }
+        } else if (edge === 1) {
+            // Spawns on bottom edge (last row), moves north
+            storm.direction = "north";
+            var startCol = Math.floor(Math.random() * (MAP_COLS - DUST_STORM_LENGTH + 1));
+            for (var i = 0; i < DUST_STORM_LENGTH; i++) {
+                storm.tiles.push({ row: MAP_ROWS - 1, col: startCol + i });
+            }
+        } else if (edge === 2) {
+            // Spawns on left edge (col 0), moves east
+            storm.direction = "east";
+            var startRow = Math.floor(Math.random() * (MAP_ROWS - DUST_STORM_LENGTH + 1));
+            for (var i = 0; i < DUST_STORM_LENGTH; i++) {
+                storm.tiles.push({ row: startRow + i, col: 0 });
+            }
+        } else {
+            // Spawns on right edge (last col), moves west
+            storm.direction = "west";
+            var startRow = Math.floor(Math.random() * (MAP_ROWS - DUST_STORM_LENGTH + 1));
+            for (var i = 0; i < DUST_STORM_LENGTH; i++) {
+                storm.tiles.push({ row: startRow + i, col: MAP_COLS - 1 });
+            }
+        }
+
+        state.dustStorms.push(storm);
+        addLog("A Dust Storm has appeared on the " + getEdgeName(edge) + " edge, moving " + storm.direction + "!", "storm");
+    }
+
+    function getEdgeName(edge) {
+        var names = ["northern", "southern", "western", "eastern"];
+        return names[edge];
+    }
+
+    function moveDustStorms() {
+        var stormsToRemove = [];
+
+        for (var i = 0; i < state.dustStorms.length; i++) {
+            var storm = state.dustStorms[i];
+            // Move each tile in the storm's direction
+            for (var j = 0; j < storm.tiles.length; j++) {
+                var tile = storm.tiles[j];
+                if (storm.direction === "south") tile.row++;
+                else if (storm.direction === "north") tile.row--;
+                else if (storm.direction === "east") tile.col++;
+                else if (storm.direction === "west") tile.col--;
+            }
+
+            // Check if entirely off-map
+            var allOffMap = true;
+            for (var j = 0; j < storm.tiles.length; j++) {
+                var t = storm.tiles[j];
+                if (t.row >= 0 && t.row < MAP_ROWS && t.col >= 0 && t.col < MAP_COLS) {
+                    allOffMap = false;
+                    break;
+                }
+            }
+            if (allOffMap) {
+                stormsToRemove.push(i);
+                addLog("A Dust Storm has left the map.", "storm");
+            }
+        }
+
+        // Remove storms that left the map (reverse order to keep indices valid)
+        for (var i = stormsToRemove.length - 1; i >= 0; i--) {
+            state.dustStorms.splice(stormsToRemove[i], 1);
+        }
+    }
+
+    function checkDustStormCollisions() {
+        for (var i = 0; i < state.dustStorms.length; i++) {
+            var storm = state.dustStorms[i];
+            for (var j = 0; j < storm.tiles.length; j++) {
+                var tile = storm.tiles[j];
+                if (tile.row < 0 || tile.row >= MAP_ROWS || tile.col < 0 || tile.col >= MAP_COLS) continue;
+
+                // Check Elon Musk
+                if (!state.gameOver && state.unit.row === tile.row && state.unit.col === tile.col) {
+                    if (!isUnitInHovel(state.unit.row, state.unit.col)) {
+                        // Elon is destroyed - becomes Elon Bones
+                        state.unit.name = "Elon Bones";
+                        state.unit.movesLeft = 0;
+                        state.unit.movesMax = 0;
+                        state.gameOver = true;
+                        addLog("Elon Musk was consumed by the Dust Storm! Only bones remain... GAME OVER!", "storm");
+                    }
+                }
+
+                // Check Rocktimus Robots
+                var robotsToRemove = [];
+                for (var r = 0; r < state.robots.length; r++) {
+                    var robot = state.robots[r];
+                    if (robot.row === tile.row && robot.col === tile.col) {
+                        if (!isUnitInHovel(robot.row, robot.col)) {
+                            // Robot is destroyed, place Rock resource on tile
+                            var mapTile = state.map[robot.row][robot.col];
+                            mapTile.resource = "rocks";
+                            robotsToRemove.push(r);
+                            addLog("A Rocktimus Robot was destroyed by the Dust Storm at (" + robot.col + ", " + robot.row + ")! It crumbled back into rocks.", "storm");
+                        }
+                    }
+                }
+                // Remove destroyed robots (reverse order)
+                for (var r = robotsToRemove.length - 1; r >= 0; r--) {
+                    state.robots.splice(robotsToRemove[r], 1);
+                }
+            }
+        }
+    }
+
+    function scheduleNextStorm() {
+        var minTurn = state.turn + DUST_STORM_INTERVAL_MIN;
+        var maxTurn = state.turn + DUST_STORM_INTERVAL_MAX;
+        state.nextStormTurn = minTurn + Math.floor(Math.random() * (maxTurn - minTurn + 1));
+    }
+
+    function processDustStorms() {
+        // Check if it's time to spawn a new storm
+        if (state.turn >= state.nextStormTurn) {
+            spawnDustStorm();
+            scheduleNextStorm();
+        }
+
+        // Move existing storms
+        moveDustStorms();
+
+        // Check collisions after movement
+        checkDustStormCollisions();
+    }
+
     function endTurn() {
+        if (state.gameOver) return;
         state.turn++;
         state.unit.movesLeft = state.unit.movesMax;
 
         addLog(`--- Turn ${state.turn} ---`, "turn");
 
         processSolarPanels();
+        processDustStorms();
 
         render();
         updateUI();
@@ -562,9 +867,18 @@
     });
 
     document.getElementById("end-turn-btn").addEventListener("click", endTurn);
-    document.getElementById("gather-btn").addEventListener("click", gatherResource);
-    document.getElementById("build-hovel-btn").addEventListener("click", buildRockHovel);
-    document.getElementById("build-solar-btn").addEventListener("click", buildSolarPanel);
+    document.getElementById("gather-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        gatherResource();
+    });
+    document.getElementById("build-hovel-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        buildRockHovel();
+    });
+    document.getElementById("build-solar-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        buildSolarPanel();
+    });
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -576,8 +890,9 @@
             return;
         }
 
-        // Block all game input while modal is open
+        // Block all game input while modal is open or game over
         if (state.hotkeyModalOpen) return;
+        if (state.gameOver) return;
 
         const unit = state.unit;
         let dr = 0;
@@ -628,8 +943,15 @@
         state.turn = 1;
         state.resources = { rocks: 0, energy: 0 };
         state.structures = [];
+        state.robots = [];
+        state.dustStorms = [];
+        state.dustStormIdCounter = 0;
+        state.gameOver = false;
         state.logs = [];
         state.selectedTile = state.map[state.unit.row][state.unit.col];
+
+        // Schedule first dust storm within the first 10 turns
+        state.nextStormTurn = 1 + Math.floor(Math.random() * DUST_STORM_FIRST_MAX_TURN);
 
         resizeCanvas();
         addLog("Elon has crash-landed on Mars!", "turn");
