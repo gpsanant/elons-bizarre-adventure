@@ -23,3 +23,9 @@
 - **Summary**: Removed duplicate `getAdjacentHovels` function — replaced all call sites with the generalized `getAdjacentStructures(row, col, "rock_hovel")` introduced by the battery feature. Normalized blank line spacing in `buildSubparBattery` to match existing build function conventions. Net -14 lines.
 - **Tests run**: no — no test suite exists; syntax-checked with `node -c game.js`
 - **Outcome**: success
+
+## reviewer — 2026-03-25T17:30:00Z
+- **Summary**: issues found — hovel energy not clamped after battery explosion (energy can exceed capacity)
+- **quality_checklist**: 5 items verified (q1, q2, q3, q4, q5 — all pass)
+- **Reviews**: code quality (1 issue: Important 85 — hovel energy exceeds capacity after battery explosion), error handling (clean), test coverage (adequate — no test infra project-wide)
+- **Outcome**: exit_signal: false (1 blocker)
