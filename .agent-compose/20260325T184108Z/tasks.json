@@ -1,0 +1,68 @@
+{
+  "quality": "skip",
+  "tasks": [
+    {
+      "id": "main",
+      "title": "Fix Dockerfile to serve on port 8080",
+      "description": "Update the Dockerfile so nginx listens on port 8080 instead of 80, and update the EXPOSE directive accordingly.",
+      "acceptance_criteria": "The Dockerfile builds successfully and the containerized app listens on port 8080.",
+      "claudeMd": "# Project Context\n\nYou are fixing a Dockerfile for a static HTML/CSS/JS game served by nginx:alpine.\n\n## What to change\n\nEdit `Dockerfile` (project root) to:\n1. Add a `RUN sed -i 's/listen\\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf` line before the EXPOSE directive\n2. Change `EXPOSE 80` to `EXPOSE 8080`\n\nThat's it — two lines changed in one file.\n\n## Verification\n\nAfter editing, run:\n```bash\ndocker build -t test-app . && docker run --rm -d -p 8080:8080 --name test-container test-app && sleep 2 && curl -s -o /dev/null -w '%{http_code}' http://localhost:8080 && docker stop test-container\n```\nExpect HTTP 200.\n\n## Conventions\n- Keep the Dockerfile minimal — no multi-stage build, no custom nginx.conf file\n- Use `sed` inline replacement to avoid adding extra files\n- Do not modify any other files",
+      "checklist": [
+        {
+          "id": "t1",
+          "description": "Add sed command to change nginx listen port from 80 to 8080",
+          "steps": [
+            "Edit Dockerfile to add RUN sed -i 's/listen\\s*80;/listen 8080;/g' /etc/nginx/conf.d/default.conf before the EXPOSE line",
+            "Change EXPOSE 80 to EXPOSE 8080",
+            "Verify the Dockerfile syntax looks correct"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t2",
+          "description": "Docker build succeeds and app responds on port 8080",
+          "steps": [
+            "Run docker build -t test-app .",
+            "Run docker run --rm -d -p 8080:8080 --name test-container test-app",
+            "Run curl -s -o /dev/null -w '%{http_code}' http://localhost:8080 and verify 200",
+            "Run docker stop test-container"
+          ],
+          "passes": true
+        }
+      ],
+      "quality_checklist": [
+        {
+          "id": "q1",
+          "description": "Dockerfile is minimal and only changes what's necessary",
+          "steps": [
+            "Verify no unnecessary layers or files were added",
+            "Verify only the listen port and EXPOSE directive changed"
+          ],
+          "passes": true
+        }
+      ]
+    }
+  ],
+  "integration": null,
+  "verification": {
+    "buildCommand": "docker build -t test-app .",
+    "runCommand": "docker run --rm -p 8080:8080 test-app",
+    "readySignal": "start worker process",
+    "appType": "web",
+    "port": 8080,
+    "checks": [
+      {
+        "id": "v1",
+        "description": "App responds with HTTP 200 on port 8080",
+        "steps": [
+          "Build the Docker image: docker build -t test-app .",
+          "Run the container: docker run --rm -d -p 8080:8080 --name test-container test-app",
+          "Wait 2 seconds for nginx to start",
+          "Verify HTTP 200: curl -s -o /dev/null -w '%{http_code}' http://localhost:8080",
+          "Stop the container: docker stop test-container"
+        ],
+        "passes": true
+      }
+    ]
+  }
+}

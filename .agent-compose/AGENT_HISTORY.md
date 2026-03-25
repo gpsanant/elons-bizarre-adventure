@@ -43,3 +43,8 @@
 - **Resolution**: Kept both features — Subpar Battery (canBuildSubparBattery, buildSubparBattery, processSubparBatteryExplosions, UI button, "t" hotkey) adapted to use getSelectedUnit() instead of state.unit; Rocktimus (canBuildRocktimus, buildRocktimus, Tab cycling, "r" hotkey) kept as-is; merged CSS to include explosion, construct, and degrade log entry styles; merged HTML to include both battery and rocktimus buttons and hotkey entries; merged endTurn to call both processSubparBatteryExplosions and processUnitDegradation; game-over guards added to all button click handlers
 - **Tests run**: none found — no automated test suite exists
 - **Outcome**: success
+
+## implementer/main — 2026-03-25T18:41:00Z
+- **Items completed**: t1, t2, q1
+- **Tests run**: yes — docker build succeeded, container responded HTTP 200 on port 8080
+- **Outcome**: success
