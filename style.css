@@ -115,6 +115,12 @@ header .subtitle {
     margin-top: 4px;
 }
 
+#unit-health {
+    color: #cc4444;
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
 #unit-lifespan {
     color: #cc6644;
     font-size: 0.85rem;

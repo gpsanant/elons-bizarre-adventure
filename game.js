@@ -40,6 +40,7 @@
             lifespan: null,
             degradeResource: null,
             buildCost: null,
+            maxHealth: 100,
         },
         rocktimus: {
             name: "Rocktimus Robot",
@@ -48,6 +49,7 @@
             lifespan: 5,
             degradeResource: { type: "rocks", amount: 1 },
             buildCost: { energy: 2, rocks: 1 },
+            maxHealth: 50,
         },
     };
 
@@ -61,6 +63,8 @@
             movesLeft: def.movesPerTurn,
             movesMax: def.movesPerTurn,
             turnsRemaining: def.lifespan,
+            health: def.maxHealth,
+            maxHealth: def.maxHealth,
         };
     }
 
@@ -763,6 +767,8 @@
         document.getElementById("unit-name").textContent = unit.name;
         document.getElementById("moves-left").textContent = unit.movesLeft;
         document.getElementById("moves-max").textContent = unit.movesMax;
+        document.getElementById("health-current").textContent = unit.health;
+        document.getElementById("health-max").textContent = unit.maxHealth;
         document.getElementById("rocks-count").textContent = state.resources.rocks;
         document.getElementById("energy-count").textContent = getTotalHovelEnergy();
 
