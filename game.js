@@ -1265,17 +1265,7 @@
         var unit = getSelectedUnit();
 
         state.resources.rocks -= 10;
-
-        // Deduct 10 energy distributed across hovels in order
-        var energyToSpend = 10;
-        for (var i = 0; i < state.structures.length; i++) {
-            if (energyToSpend <= 0) break;
-            var s = state.structures[i];
-            if (s.type !== "rock_hovel") continue;
-            var drain = Math.min(s.energy, energyToSpend);
-            s.energy -= drain;
-            energyToSpend -= drain;
-        }
+        deductHovelEnergy(10);
 
         state.structures.push({
             type: "comm_dish",
@@ -1302,15 +1292,7 @@
         var unit = getSelectedUnit();
 
         state.resources.rocks -= 10;
-
-        // Deduct 5 energy distributed across hovels in order
-        var energyNeeded = 5;
-        for (var i = 0; i < state.structures.length && energyNeeded > 0; i++) {
-            if (state.structures[i].type !== "rock_hovel") continue;
-            var drain = Math.min(state.structures[i].energy, energyNeeded);
-            state.structures[i].energy -= drain;
-            energyNeeded -= drain;
-        }
+        deductHovelEnergy(5);
 
         state.structures.push({
             type: "greenhouse",
@@ -1457,6 +1439,16 @@
             }
         }
         return total;
+    }
+
+    function deductHovelEnergy(amount) {
+        var remaining = amount;
+        for (var i = 0; i < state.structures.length && remaining > 0; i++) {
+            if (state.structures[i].type !== "rock_hovel") continue;
+            var drain = Math.min(state.structures[i].energy, remaining);
+            state.structures[i].energy -= drain;
+            remaining -= drain;
+        }
     }
 
     // --------------- Solar Panels ---------------
