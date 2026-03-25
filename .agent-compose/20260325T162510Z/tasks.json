@@ -1,0 +1,220 @@
+{
+  "quality": "full",
+  "tasks": [
+    {
+      "id": "main",
+      "title": "Implement Subpar Battery structure",
+      "description": "Add the Subpar Battery as a new constructible structure in the game. This includes: build logic with resource costs (2 Energy + 2 Rock), adjacency requirements (must be on empty tile adjacent to Solar Panel or Rock Hovel), dynamic Rock Hovel energy capacity bonus (+4 per adjacent battery, including two-hop via Solar Panel), 2% per-turn explosion chance with removal, canvas rendering, UI button with enable/disable logic, tile info display, hotkey (T), and game log entries for building and exploding.",
+      "acceptance_criteria": "1. 'Build Subpar Battery' button in action panel, enabled only when Elon is on empty tile adjacent to Solar Panel or Rock Hovel with >=2 Energy and >=2 Rock.\n2. Building deducts 2 Energy and 2 Rock, places Subpar Battery structure.\n3. Rock Hovel energy capacity increases by 4 per adjacent Subpar Battery (direct or two-hop via Solar Panel).\n4. Tile info shows updated capacity (e.g., 'Energy: X / 6').\n5. Solar Panels store energy up to new increased cap.\n6. 2% per-turn explosion chance removes battery, logs message, removes capacity bonus.\n7. Distinct canvas rendering with label.\n8. Hotkey T for building.\n9. Log entries for build and explosion events.",
+      "claudeMd": "# Subpar Battery Implementation\n\nYou are adding a new structure type (Subpar Battery) to a vanilla JS browser game.\n\n## Project Structure\n\n- `game.js` — Single IIFE containing all game logic (~640 lines). All code lives here.\n- `index.html` — Game page with sidebar UI (action buttons, tile info, log, hotkey modal)\n- `style.css` — Mars-themed dark styling\n\n## Conventions (MUST follow exactly)\n\n- All JS is inside the IIFE `(function () { \"use strict\"; ... })()` in `game.js`\n- Structures are stored in `state.structures` as `{ type: \"type_name\", row, col, ...extraProps }`\n- Existing types: `\"rock_hovel\"` (has `energy` property), `\"solar_panel\"`\n- Build functions follow pattern: `canBuildX()` returns boolean, `buildX()` does the action\n- `getStructureAt(row, col)` finds a structure at a position\n- `getAdjacentHovels(row, col)` finds adjacent Rock Hovels — use this pattern for new adjacency helpers\n- `addLog(message, type)` for game log entries. Existing types: \"move\", \"gather\", \"turn\", \"build\", \"energy\"\n- Canvas drawing: `drawStructure()` dispatches by `structure.type`. Each type has its own draw function.\n- UI buttons: `<button id=\"...\" class=\"action-btn\" disabled>Label</button>` in `#action-panel`\n- Hotkeys: switch/case block in the `keydown` listener. Existing: w/s/a/d=move, g=gather, b=hovel, p=solar, e/Enter=end turn, Escape=modal\n- Button enable/disable logic is in `updateUI()`\n- Tile info display is in `updateTileInfo()`\n- `var` is used for some older code, but `const`/`let` are also used. Match whichever style is nearest to your insertion point.\n\n## Implementation Steps\n\n### 1. Helper functions (add near `getAdjacentHovels`)\n\n```js\nfunction getAdjacentStructures(row, col, type) {\n    var results = [];\n    for (var dr = -1; dr <= 1; dr++) {\n        for (var dc = -1; dc <= 1; dc++) {\n            if (dr === 0 && dc === 0) continue;\n            var nr = row + dr;\n            var nc = col + dc;\n            if (nr < 0 || nr >= MAP_ROWS || nc < 0 || nc >= MAP_COLS) continue;\n            var s = getStructureAt(nr, nc);\n            if (s && s.type === type) results.push(s);\n        }\n    }\n    return results;\n}\n```\n\n```js\nfunction getHovelCapacity(hovel) {\n    var base = 2;\n    var seen = new Set(); // track battery positions to avoid double-counting\n    // Direct adjacent batteries\n    var directBatteries = getAdjacentStructures(hovel.row, hovel.col, \"subpar_battery\");\n    for (var i = 0; i < directBatteries.length; i++) {\n        seen.add(directBatteries[i].row + \",\" + directBatteries[i].col);\n    }\n    // Two-hop: batteries adjacent to Solar Panels that are adjacent to the hovel\n    var adjacentPanels = getAdjacentStructures(hovel.row, hovel.col, \"solar_panel\");\n    for (var p = 0; p < adjacentPanels.length; p++) {\n        var panelBatteries = getAdjacentStructures(adjacentPanels[p].row, adjacentPanels[p].col, \"subpar_battery\");\n        for (var b = 0; b < panelBatteries.length; b++) {\n            seen.add(panelBatteries[b].row + \",\" + panelBatteries[b].col);\n        }\n    }\n    return base + seen.size * 4;\n}\n```\n\n### 2. Build functions (add near `buildSolarPanel`)\n\n```js\nfunction canBuildSubparBattery() {\n    var unit = state.unit;\n    if (state.resources.energy < 2 || state.resources.rocks < 2) return false;\n    if (getStructureAt(unit.row, unit.col) !== null) return false;\n    var adjPanels = getAdjacentStructures(unit.row, unit.col, \"solar_panel\");\n    var adjHovels = getAdjacentStructures(unit.row, unit.col, \"rock_hovel\");\n    return adjPanels.length > 0 || adjHovels.length > 0;\n}\n\nfunction buildSubparBattery() {\n    if (!canBuildSubparBattery()) return;\n    var unit = state.unit;\n    state.resources.energy -= 2;\n    state.resources.rocks -= 2;\n    state.structures.push({\n        type: \"subpar_battery\",\n        row: unit.row,\n        col: unit.col,\n    });\n    addLog(\"Elon built a Subpar Battery at (\" + unit.col + \", \" + unit.row + \")\", \"build\");\n    render();\n    updateUI();\n}\n```\n\n### 3. Explosion processing (add near `processSolarPanels`)\n\n```js\nfunction processSubparBatteryExplosions() {\n    for (var i = state.structures.length - 1; i >= 0; i--) {\n        var s = state.structures[i];\n        if (s.type !== \"subpar_battery\") continue;\n        if (Math.random() < 0.02) {\n            addLog(\"A Subpar Battery at (\" + s.col + \", \" + s.row + \") exploded!\", \"explosion\");\n            state.structures.splice(i, 1);\n        }\n    }\n}\n```\n\nCall `processSubparBatteryExplosions()` in `endTurn()` BEFORE `processSolarPanels()` so that exploded batteries don't contribute to capacity that turn.\n\n### 4. Fix energy cap in `processSolarPanels()`\n\nChange `if (hovels[j].energy < 2)` to `if (hovels[j].energy < getHovelCapacity(hovels[j]))`.\n\n### 5. Canvas rendering (add near `drawSolarPanel`)\n\nCreate `drawSubparBattery(structure)` — draw a green/lime battery shape with terminal nubs and a \"BATTERY\" label. Use TILE_SIZE constant for positioning.\n\nUpdate `drawStructure()` to dispatch: `if (structure.type === \"subpar_battery\") { drawSubparBattery(structure); return; }`\n\n### 6. UI (index.html)\n\nAdd after the Solar Panel button in `#action-panel`:\n```html\n<button id=\"build-battery-btn\" class=\"action-btn\" disabled>Build Subpar Battery (2 \u26a1 2 \ud83e\udea8)</button>\n```\n\nAdd hotkey row in the modal table tbody (after the Solar Panel row):\n```html\n<tr><td><kbd>T</kbd></td><td>Build Subpar Battery</td></tr>\n```\n\n### 7. UI logic (game.js)\n\nIn `updateUI()`, add:\n```js\nvar batteryBtn = document.getElementById(\"build-battery-btn\");\nbatteryBtn.disabled = !canBuildSubparBattery();\n```\n\nAdd click listener:\n```js\ndocument.getElementById(\"build-battery-btn\").addEventListener(\"click\", buildSubparBattery);\n```\n\nIn keyboard handler, add case `\"t\"` to call `buildSubparBattery()`.\n\n### 8. Tile info (game.js `updateTileInfo()`)\n\nAdd `else if` for `subpar_battery` type → `structureText = \"Subpar Battery\"`.\n\nFor Rock Hovel, change `' / 2'` to `' / ' + getHovelCapacity(tileStructure)` so it reflects dynamic capacity.\n\n### 9. CSS (style.css)\n\nAdd log entry style for explosions:\n```css\n#game-log .log-entry.explosion {\n    color: #ff4444;\n}\n```\n\n## Gotchas\n\n- Iterate structures in REVERSE when removing (explosion) to avoid index shifting bugs.\n- The `getHovelCapacity()` must deduplicate batteries reachable both directly and via Solar Panel (use a Set keyed on row,col).\n- The `processSolarPanels()` hardcoded `energy < 2` MUST be replaced with `energy < getHovelCapacity(hovels[j])` — this is the core integration point.\n- `state.resources.energy` tracks total energy across all hovels. When a hovel stores more due to increased cap, `state.resources.energy` still increments normally in `processSolarPanels()`.\n- Button click listener must be added OUTSIDE the IIFE's function definitions, near the existing `addEventListener` calls at the bottom.",
+      "checklist": [
+        {
+          "id": "t1",
+          "description": "Add getAdjacentStructures() and getHovelCapacity() helper functions",
+          "steps": [
+            "Add getAdjacentStructures(row, col, type) function near getAdjacentHovels in game.js",
+            "Add getHovelCapacity(hovel) function that computes base 2 + 4 per unique adjacent battery (direct + two-hop via Solar Panel)",
+            "Verify getHovelCapacity uses a Set to deduplicate batteries reachable both ways"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t2",
+          "description": "Add canBuildSubparBattery() and buildSubparBattery() functions",
+          "steps": [
+            "Add canBuildSubparBattery() that checks >=2 Energy, >=2 Rock, empty tile, adjacent to Solar Panel or Rock Hovel",
+            "Add buildSubparBattery() that deducts 2 Energy + 2 Rock, pushes structure, adds log, re-renders",
+            "Verify build function follows same pattern as buildSolarPanel()"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t3",
+          "description": "Add explosion processing in end-of-turn",
+          "steps": [
+            "Add processSubparBatteryExplosions() that iterates structures in reverse, 2% chance to remove each battery",
+            "Add log message with 'explosion' type when a battery explodes",
+            "Call processSubparBatteryExplosions() in endTurn() BEFORE processSolarPanels()"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t4",
+          "description": "Update processSolarPanels() to use dynamic energy capacity",
+          "steps": [
+            "Replace hardcoded 'hovels[j].energy < 2' with 'hovels[j].energy < getHovelCapacity(hovels[j])'",
+            "Verify Solar Panels can now store energy up to the new increased cap"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t5",
+          "description": "Add canvas rendering for Subpar Battery",
+          "steps": [
+            "Create drawSubparBattery(structure) function with distinct visual (green/lime battery body, terminal nubs, 'BATTERY' label)",
+            "Add dispatch in drawStructure() for type 'subpar_battery'",
+            "Verify the battery renders on the canvas tile at correct position"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t6",
+          "description": "Add Build Subpar Battery button in HTML action panel",
+          "steps": [
+            "Add <button id='build-battery-btn' class='action-btn' disabled>Build Subpar Battery (2 ⚡ 2 🪨)</button> after the Solar Panel button in index.html",
+            "Add click event listener for build-battery-btn calling buildSubparBattery() in game.js"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t7",
+          "description": "Add button enable/disable logic in updateUI()",
+          "steps": [
+            "Add batteryBtn.disabled = !canBuildSubparBattery() in the updateUI() function",
+            "Verify button is enabled only when on empty tile adjacent to Solar Panel or Rock Hovel with sufficient resources"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t8",
+          "description": "Add keyboard hotkey T for building Subpar Battery",
+          "steps": [
+            "Add case 't' in the keydown switch block calling buildSubparBattery()",
+            "Add hotkey row <tr><td><kbd>T</kbd></td><td>Build Subpar Battery</td></tr> to the hotkey modal table in index.html"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t9",
+          "description": "Update tile info display for Subpar Battery and dynamic hovel capacity",
+          "steps": [
+            "Add else-if branch in updateTileInfo() for subpar_battery type showing 'Subpar Battery'",
+            "Change Rock Hovel energy display from hardcoded '/ 2' to '/ ' + getHovelCapacity(tileStructure)",
+            "Verify tile info shows correct capacity (e.g., 'Energy: 0 / 6' with one adjacent battery)"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t10",
+          "description": "Add CSS style for explosion log entries",
+          "steps": [
+            "Add #game-log .log-entry.explosion { color: #ff4444; } to style.css",
+            "Verify explosion log messages display in red"
+          ],
+          "passes": true
+        }
+      ],
+      "quality_checklist": [
+        {
+          "id": "q1",
+          "description": "No hardcoded energy capacity '2' remains in processSolarPanels or updateTileInfo for Rock Hovels",
+          "steps": [
+            "Grep game.js for 'energy < 2' and '/ 2' in Rock Hovel contexts",
+            "Verify all references use getHovelCapacity() instead"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q2",
+          "description": "Battery deduplication in getHovelCapacity prevents double-counting",
+          "steps": [
+            "Read getHovelCapacity() implementation",
+            "Verify it uses a Set or equivalent to deduplicate batteries reachable both directly and via Solar Panel"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q3",
+          "description": "Explosion iterates structures in reverse to avoid index shifting bugs",
+          "steps": [
+            "Read processSubparBatteryExplosions()",
+            "Verify the for loop uses a decrementing index (i--) and splice(i, 1)"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q4",
+          "description": "Code style matches existing patterns (var vs const/let, function naming, structure)",
+          "steps": [
+            "Compare new functions with buildSolarPanel, canBuildSolarPanel, drawSolarPanel patterns",
+            "Verify consistent naming, indentation, and variable declaration style"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q5",
+          "description": "No unused code, no over-engineering, no extra abstractions beyond what's needed",
+          "steps": [
+            "Review all new code for unnecessary complexity",
+            "Verify no dead code paths or unused variables were introduced"
+          ],
+          "passes": true
+        }
+      ]
+    }
+  ],
+  "integration": null,
+  "verification": {
+    "buildCommand": null,
+    "runCommand": "python3 -m http.server 8080",
+    "readySignal": "Serving HTTP",
+    "appType": "web",
+    "port": 8080,
+    "checks": [
+      {
+        "id": "v1",
+        "description": "Build Subpar Battery button appears and is disabled by default",
+        "steps": [
+          "Open the game in a browser at http://localhost:8080",
+          "Look for 'Build Subpar Battery' button in the action panel sidebar",
+          "Verify button is present and disabled (Elon starts with 0 resources)"
+        ],
+        "passes": true
+      },
+      {
+        "id": "v2",
+        "description": "Battery can be built when adjacent to Solar Panel or Rock Hovel with sufficient resources",
+        "steps": [
+          "Gather 12+ rocks (for a Rock Hovel + Solar Panel + battery cost)",
+          "Build a Rock Hovel (B key), move to adjacent tile",
+          "Build a Solar Panel (P key), move to another adjacent tile",
+          "Verify Build Subpar Battery button becomes enabled when on empty tile adjacent to a structure with enough resources",
+          "Press T to build the battery",
+          "Verify resources decrease by 2 Energy and 2 Rock",
+          "Verify battery appears on the canvas with 'BATTERY' label"
+        ],
+        "passes": true
+      },
+      {
+        "id": "v3",
+        "description": "Rock Hovel tile info shows increased capacity when battery is adjacent",
+        "steps": [
+          "Click on a Rock Hovel tile that has an adjacent Subpar Battery",
+          "Verify tile info shows 'Energy: X / 6' instead of 'X / 2'",
+          "Build a second adjacent battery if possible and verify capacity shows '/ 10'"
+        ],
+        "passes": true
+      },
+      {
+        "id": "v4",
+        "description": "Hotkey T works and hotkey modal shows the binding",
+        "steps": [
+          "Press ESC to open the hotkey modal",
+          "Verify there is a row showing 'T' -> 'Build Subpar Battery'",
+          "Close modal, verify T key triggers the build when conditions are met"
+        ],
+        "passes": true
+      },
+      {
+        "id": "v5",
+        "description": "Game log entries appear for build and explosion events",
+        "steps": [
+          "Build a battery and verify a log entry appears",
+          "End many turns and eventually observe an explosion log entry (or verify the code path exists)",
+          "Verify explosion log text is styled in red"
+        ],
+        "passes": true
+      }
+    ]
+  }
+}
