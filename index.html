@@ -49,6 +49,7 @@
                     <button id="build-comm-dish-btn" class="action-btn" disabled>Build Comm Dish (10&#x1FAA8; 10&#x26A1;)</button>
                     <button id="call-earth-btn" class="action-btn" disabled>&#x1F4E1; Call Earth</button>
                     <button id="build-throne-btn" class="action-btn" disabled>Build Mars Throne (All &#x1FAA8; &#x26A1;)</button>
+                    <button id="sit-throne-btn" class="action-btn" disabled>Sit on the Mars Throne</button>
                     <div id="no-actions-msg" class="no-actions-msg" style="display:none">No actions available — move to a resource or gain more resources.</div>
                 </div>
                 <div id="log-panel" class="panel">
@@ -69,6 +70,16 @@
                 </div>
                 <p id="call-earth-message" class="call-earth-msg"></p>
                 <p class="modal-hint">Click &times; to close</p>
+            </div>
+        </div>
+        <div id="throne-dialog" class="hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Mars Throne</h2>
+                </div>
+                <p id="throne-dialog-message" class="throne-dialog-msg"></p>
+                <button id="throne-dialog-btn" class="throne-dialog-action-btn">Continue</button>
             </div>
         </div>
         <div id="hotkey-modal" class="hidden">

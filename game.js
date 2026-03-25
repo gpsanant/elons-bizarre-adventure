@@ -84,6 +84,8 @@
         commDishesUsedThisTurn: [],
         callEarthDialogOpen: false,
         marsThronePlaced: false,
+        throneDialogOpen: false,
+        throneDialogStep: 0,
     };
 
     function refreshView() {
@@ -820,6 +822,17 @@
             throneBtn.disabled = true;
         }
 
+        // Sit on Mars Throne button
+        var sitThroneBtn = document.getElementById("sit-throne-btn");
+        if (canSitOnThrone()) {
+            sitThroneBtn.style.display = "";
+            sitThroneBtn.disabled = false;
+            anyVisible = true;
+        } else {
+            sitThroneBtn.style.display = "none";
+            sitThroneBtn.disabled = true;
+        }
+
         // No actions fallback message
         document.getElementById("no-actions-msg").style.display = anyVisible ? "none" : "";
 
@@ -1256,9 +1269,77 @@
 
         state.marsThronePlaced = true;
         addLog(unit.name + " built the Mars Throne at (" + openTile.col + ", " + openTile.row + ")", "build");
-        addLog("Elon has claimed Mars. Long live the King of Mars.", "victory");
-        state.gameOver = true;
         refreshView();
+    }
+
+    // --------------- Sit on Mars Throne ---------------
+    function getAdjacentMarsThrone(unit) {
+        // Check if unit is on a Mars Throne
+        var onThrone = getStructureAt(unit.row, unit.col);
+        if (onThrone && onThrone.type === "mars_throne") return onThrone;
+        // Check adjacent tiles
+        for (var dr = -1; dr <= 1; dr++) {
+            for (var dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                var nr = unit.row + dr;
+                var nc = unit.col + dc;
+                if (!isInBounds(nr, nc)) continue;
+                var s = getStructureAt(nr, nc);
+                if (s && s.type === "mars_throne") return s;
+            }
+        }
+        return null;
+    }
+
+    function canSitOnThrone() {
+        if (state.gameOver) return false;
+        if (!state.marsThronePlaced) return false;
+        var unit = getSelectedUnit();
+        if (unit.type !== "elon") return false;
+        return getAdjacentMarsThrone(unit) !== null;
+    }
+
+    function sitOnThrone() {
+        if (!canSitOnThrone()) return;
+        state.throneDialogOpen = true;
+        state.throneDialogStep = 1;
+        var dialogEl = document.getElementById("throne-dialog");
+        var msgEl = document.getElementById("throne-dialog-message");
+        var btnEl = document.getElementById("throne-dialog-btn");
+        msgEl.textContent = "You are the king of Mars!";
+        btnEl.textContent = "Continue";
+        dialogEl.classList.remove("hidden");
+        refreshView();
+    }
+
+    function advanceThroneDialog() {
+        if (state.throneDialogStep === 1) {
+            state.throneDialogStep = 2;
+            var msgEl = document.getElementById("throne-dialog-message");
+            var btnEl = document.getElementById("throne-dialog-btn");
+            msgEl.textContent = "The throne is comfortable, but your space suit has caught on a sharp edge and sprung a leak.";
+            btnEl.textContent = "Continue";
+        } else if (state.throneDialogStep === 2) {
+            state.throneDialogStep = 3;
+            // Change Elon to Elon Bones
+            var elon = state.units[0];
+            elon.name = "Elon Bones";
+            elon.movesLeft = 0;
+            elon.movesMax = 0;
+            state.gameOver = true;
+            var msgEl = document.getElementById("throne-dialog-message");
+            var btnEl = document.getElementById("throne-dialog-btn");
+            msgEl.textContent = "Game Over";
+            btnEl.textContent = "Restart";
+            addLog("Elon has perished on the Mars Throne. Game Over.", "victory");
+            refreshView();
+        } else if (state.throneDialogStep === 3) {
+            // Restart the game
+            state.throneDialogOpen = false;
+            state.throneDialogStep = 0;
+            document.getElementById("throne-dialog").classList.add("hidden");
+            init();
+        }
     }
 
     function getTotalHovelEnergy() {
@@ -1617,6 +1698,11 @@
         if (state.gameOver) return;
         buildMarsThrone();
     });
+    document.getElementById("sit-throne-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        sitOnThrone();
+    });
+    document.getElementById("throne-dialog-btn").addEventListener("click", advanceThroneDialog);
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -1631,6 +1717,7 @@
         // Block all game input while modal/dialog is open or game over
         if (state.hotkeyModalOpen) return;
         if (state.callEarthDialogOpen) return;
+        if (state.throneDialogOpen) return;
         if (state.gameOver) return;
 
         const unit = getSelectedUnit();
@@ -1718,6 +1805,8 @@
         state.contactedEarth = false;
         state.commDishesUsedThisTurn = [];
         state.callEarthDialogOpen = false;
+        state.throneDialogOpen = false;
+        state.throneDialogStep = 0;
         state.selectedTile = state.map[elonUnit.row][elonUnit.col];
 
         // Schedule first dust storm within the first 10 turns

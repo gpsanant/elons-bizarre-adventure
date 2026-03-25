@@ -373,3 +373,44 @@ kbd {
 #game-log .log-entry.comm {
     color: #88ccff;
 }
+
+/* --------------- Throne Dialog --------------- */
+#throne-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#throne-dialog.hidden {
+    display: none;
+}
+
+.throne-dialog-msg {
+    font-size: 1rem;
+    color: #FFD700;
+    text-align: center;
+    padding: 12px 0;
+    font-style: italic;
+}
+
+.throne-dialog-action-btn {
+    display: block;
+    margin: 12px auto 0;
+    background: linear-gradient(135deg, #6a0dad, #4a0080);
+    color: #FFD700;
+    border: 1px solid #FFD700;
+    padding: 10px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.throne-dialog-action-btn:hover {
+    background: linear-gradient(135deg, #8a2dd0, #6a0dad);
+    transform: scale(1.05);
+}
