@@ -1,0 +1,230 @@
+{
+  "quality": "full",
+  "tasks": [
+    {
+      "id": "main",
+      "title": "Add Call Earth action and Mars Throne structure with victory condition",
+      "description": "Implement two connected features: (1) A 'Call Earth' action available when a unit stands on a Comm Dish, setting state.contactedEarth=true. (2) A 'Mars Throne' structure that becomes buildable after contacting Earth, consumes ALL remaining rocks and energy, is placed on an adjacent empty tile, and triggers a victory state. Includes canvas visuals, hotkeys, log entries, UI buttons, and victory messaging.",
+      "acceptance_criteria": "1. 'Call Earth' button appears when unit is on a Comm Dish; sets state.contactedEarth=true.\n2. 'Build Mars Throne' button only appears/enables after state.contactedEarth is true.\n3. Building Mars Throne requires at least 1 rock and 1 energy.\n4. Building Mars Throne consumes ALL rocks and ALL hovel energy.\n5. Mars Throne is placed on an empty adjacent tile (no structure or unit).\n6. A unique Mars Throne visual is drawn on the canvas.\n7. A log entry announces construction.\n8. A victory message is displayed: 'Elon has claimed Mars. Long live the King of Mars.'\n9. Hotkey L for Call Earth and M for Build Mars Throne, both added to hotkey table.\n10. Only one Mars Throne can be built per game (state.marsThronePlaced).",
+      "claudeMd": "# Project Context\n\nYou are implementing two connected features in a single-file vanilla JS browser game: `game.js` (with `index.html` and `style.css`).\n\n## Tech Stack\n- Plain HTML/CSS/JS, no frameworks, no build tools, no npm\n- All game logic is in a single IIFE in `game.js`\n- Canvas-based rendering at 40x40px tiles\n- No tests exist\n\n## Codebase Conventions\n\n### State\nAll game state lives in the `state` object (~line 68). Add new fields there AND in `init()` (~line 1479).\n\n### Structure Pattern (follow exactly)\nEvery structure follows this pattern:\n1. `canBuildX()` — predicate returning boolean\n2. `buildX()` — executes the build, pushes to `state.structures`, calls `addLog()` and `refreshView()`\n3. `drawX(structure)` — canvas drawing function\n4. Add case in `drawStructure()` (~line 273) to dispatch to your draw function\n5. Add case in `updateTileInfo()` (~line 756) for the structure type string\n6. Add button in `index.html` `#action-panel` div\n7. Wire button with `addEventListener` in JS\n8. Add hotkey in the `keydown` switch (~line 1422)\n9. Add hotkey row in the hotkey table in `index.html`\n10. Enable/disable button in `updateUI()` (~line 694)\n\n### Key Existing Functions to Reuse\n- `findAdjacentOpenTile(row, col)` — finds adjacent tile with no unit and no structure. Returns `{row, col}` or null. Use this for Mars Throne placement.\n- `getStructureAt(row, col)` — returns structure at tile or null\n- `getTotalHovelEnergy()` — returns sum of all hovel energy\n- `getSelectedUnit()` — returns currently selected unit\n- `addLog(message, type)` — adds log entry. Types: 'build', 'construct', 'turn', 'energy', 'storm', 'explosion', 'degrade', 'gather', 'move'\n- `refreshView()` — re-renders canvas and updates UI\n\n### Drawing Conventions\n- Each draw function takes a `structure` object with `.row`, `.col`, `.type`\n- Calculate pixel position: `var x = structure.col * TILE_SIZE; var y = structure.row * TILE_SIZE;`\n- Use `ctx` (the canvas 2d context) for all drawing\n- Use `TILE_SIZE` (40) for dimensions\n- Use `drawCircle(x, y, r)` helper for circles\n- End with a label: `ctx.fillStyle = '...'; ctx.font = 'bold Npx sans-serif'; ctx.textAlign = 'center'; ctx.fillText('LABEL', x + TILE_SIZE / 2, y + TILE_SIZE - 1);`\n\n### Button Style in HTML\nAll action buttons use class `action-btn` and follow this pattern:\n```html\n<button id=\"build-X-btn\" class=\"action-btn\" disabled>Label (cost)</button>\n```\n\n## Implementation Steps\n\n### Part 1: Call Earth Action\n1. Add `contactedEarth: false` to `state` object (~line 82, after `hotkeyModalOpen`)\n2. Add `contactedEarth: false` to `init()` (~line 1490)\n3. Add `canCallEarth()` function: unit must be on a comm_dish, contactedEarth must be false, game not over\n4. Add `callEarth()` function: sets `state.contactedEarth = true`, logs message, calls `refreshView()`\n5. Add button in `index.html` after the comm dish button: `<button id=\"call-earth-btn\" class=\"action-btn\" disabled>Call Earth (on Comm Dish)</button>`\n6. Wire button click handler (with gameOver guard)\n7. Add hotkey `l` (lowercase) in keydown switch\n8. Add hotkey row in hotkey table: `<tr><td><kbd>L</kbd></td><td>Call Earth</td></tr>`\n9. In `updateUI()`, enable/disable `call-earth-btn` based on `canCallEarth()`\n\n### Part 2: Mars Throne\n1. Add `marsThronePlaced: false` to `state` object\n2. Add `marsThronePlaced: false` to `init()`\n3. Add `canBuildMarsThrone()`: contactedEarth true, marsThronePlaced false, rocks >= 1, getTotalHovelEnergy() >= 1, findAdjacentOpenTile returns non-null for selected unit\n4. Add `buildMarsThrone()`: consume all rocks (`state.resources.rocks = 0`), drain all hovels to 0 energy, find adjacent tile via findAdjacentOpenTile, push structure `{type: 'mars_throne', row, col}`, set marsThronePlaced=true, log build message, log victory message 'Elon has claimed Mars. Long live the King of Mars.', set state.gameOver=true\n5. Add `drawMarsThrone(structure)`: Design a grand throne — wide stone base, tall rectangular back, golden crown/orb at top, label 'THRONE' in gold. Use warm gold (#FFD700), dark stone (#4a3a2a), and royal purple (#6a0dad) accents.\n6. Add `mars_throne` case in `drawStructure()`\n7. Add `mars_throne` case in `updateTileInfo()` → 'Mars Throne'\n8. Add button in `index.html` after call-earth button: `<button id=\"build-throne-btn\" class=\"action-btn\" disabled>Build Mars Throne (All &#x1FAA8; &#x26A1;)</button>`\n9. Wire button click handler\n10. Add hotkey `m` in keydown switch\n11. Add hotkey row in hotkey table: `<tr><td><kbd>M</kbd></td><td>Build Mars Throne</td></tr>`\n12. In `updateUI()`, enable/disable `build-throne-btn` based on `canBuildMarsThrone()`\n\n### Part 3: Victory Styling\n1. Add `.log-entry.victory` CSS class in `style.css` — gold color (#FFD700), bold, maybe with text-shadow\n2. Use log type 'victory' for the victory message in buildMarsThrone\n\n## Gotchas\n- `getTotalHovelEnergy()` returns total energy across all hovels. To drain ALL energy, iterate all structures and set energy=0 for each rock_hovel.\n- The game uses `var` everywhere (not `let`/`const` consistently) — match existing style per section. Newer additions use `var` in the structure functions.\n- `findAdjacentOpenTile` checks for both units AND structures, which is exactly what we need.\n- The `state.gameOver = true` line prevents all further actions. The victory state reuses this mechanism.\n- When adding to `updateUI()`, follow the existing pattern of getting the button element and setting `.disabled`.\n- The hotkey table in `index.html` is a static HTML table — add rows manually.\n- Make sure the Call Earth button only shows as enabled when standing on a Comm Dish AND contactedEarth is false. After calling, it should stay disabled forever.\n- Make sure Build Mars Throne button stays disabled until contactedEarth is true.\n",
+      "checklist": [
+        {
+          "id": "t1",
+          "description": "Add contactedEarth and marsThronePlaced state flags",
+          "steps": [
+            "Add contactedEarth: false to state object after hotkeyModalOpen (~line 82)",
+            "Add marsThronePlaced: false to state object",
+            "Add contactedEarth: false to init() reset block (~line 1490)",
+            "Add marsThronePlaced: false to init() reset block",
+            "Verify state object has both new fields"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t2",
+          "description": "Implement Call Earth action (canCallEarth + callEarth functions)",
+          "steps": [
+            "Add canCallEarth() function: selected unit on comm_dish, contactedEarth is false",
+            "Add callEarth() function: set state.contactedEarth = true, addLog with message, refreshView()",
+            "Verify callEarth sets contactedEarth to true"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t3",
+          "description": "Add Call Earth button in HTML, wire click handler and hotkey",
+          "steps": [
+            "Add <button id='call-earth-btn'> in index.html #action-panel after comm dish button",
+            "Wire click handler in JS with gameOver guard",
+            "Add 'l' case in keydown switch calling callEarth()",
+            "Add hotkey row <tr><td><kbd>L</kbd></td><td>Call Earth</td></tr> to hotkey table",
+            "In updateUI(), add call-earth-btn enable/disable based on canCallEarth()"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t4",
+          "description": "Implement canBuildMarsThrone predicate",
+          "steps": [
+            "Add canBuildMarsThrone() that checks: contactedEarth true, marsThronePlaced false, rocks >= 1, getTotalHovelEnergy() >= 1, findAdjacentOpenTile(unit.row, unit.col) returns non-null",
+            "Verify it returns false when contactedEarth is false",
+            "Verify it returns false when rocks are 0 or energy is 0",
+            "Verify it returns false when marsThronePlaced is true"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t5",
+          "description": "Implement buildMarsThrone function with resource consumption and victory",
+          "steps": [
+            "Add buildMarsThrone() that calls canBuildMarsThrone guard",
+            "Set state.resources.rocks = 0",
+            "Iterate all structures, set energy = 0 for each rock_hovel",
+            "Call findAdjacentOpenTile to get placement tile",
+            "Push {type: 'mars_throne', row, col} to state.structures",
+            "Set state.marsThronePlaced = true",
+            "Call addLog for build message (type: 'build')",
+            "Call addLog with 'Elon has claimed Mars. Long live the King of Mars.' (type: 'victory')",
+            "Set state.gameOver = true",
+            "Call refreshView()"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t6",
+          "description": "Add Build Mars Throne button in HTML, wire click handler and hotkey",
+          "steps": [
+            "Add <button id='build-throne-btn'> in index.html #action-panel after call-earth button",
+            "Wire click handler in JS with gameOver guard",
+            "Add 'm' case in keydown switch calling buildMarsThrone()",
+            "Add hotkey row for M / Build Mars Throne in hotkey table",
+            "In updateUI(), add build-throne-btn enable/disable based on canBuildMarsThrone()"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t7",
+          "description": "Draw Mars Throne visual on canvas",
+          "steps": [
+            "Add drawMarsThrone(structure) function with throne visual (stone base, tall back, golden crown, label 'THRONE')",
+            "Add 'mars_throne' case in drawStructure() dispatch",
+            "Verify the visual renders within the 40x40 tile bounds"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t8",
+          "description": "Add Mars Throne to tile info display",
+          "steps": [
+            "Add 'mars_throne' case to updateTileInfo() structure text block, displaying 'Mars Throne'",
+            "Verify clicking on Mars Throne tile shows correct info"
+          ],
+          "passes": true
+        },
+        {
+          "id": "t9",
+          "description": "Add victory log CSS styling",
+          "steps": [
+            "Add .log-entry.victory CSS rule in style.css with gold color (#FFD700), bold text, optional text-shadow",
+            "Verify victory log entries appear styled differently from other logs"
+          ],
+          "passes": true
+        }
+      ],
+      "quality_checklist": [
+        {
+          "id": "q1",
+          "description": "No duplicate state initialization — contactedEarth and marsThronePlaced appear exactly once in state object and once in init()",
+          "steps": [
+            "Grep for contactedEarth in game.js, verify exactly 2 initialization sites (state + init)",
+            "Grep for marsThronePlaced in game.js, verify exactly 2 initialization sites"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q2",
+          "description": "canBuildMarsThrone correctly prevents building with 0 resources",
+          "steps": [
+            "Read canBuildMarsThrone, verify rocks >= 1 AND getTotalHovelEnergy() >= 1 checks exist",
+            "Verify marsThronePlaced check prevents double-build"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q3",
+          "description": "buildMarsThrone drains ALL resources, not a fixed amount",
+          "steps": [
+            "Verify rocks are set to 0 (not decremented by a fixed amount)",
+            "Verify all hovels' energy is set to 0 (iterate structures, not drain a fixed amount)"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q4",
+          "description": "Code style matches existing patterns — var declarations, function naming, indentation",
+          "steps": [
+            "Check new functions use var (not let/const) to match surrounding code in the structure-building section",
+            "Check function naming follows camelCase pattern: canBuildX, buildX, drawX",
+            "Check indentation matches 4 spaces used elsewhere"
+          ],
+          "passes": true
+        },
+        {
+          "id": "q5",
+          "description": "All new buttons have proper disabled state management in updateUI()",
+          "steps": [
+            "Verify call-earth-btn is disabled when canCallEarth() is false",
+            "Verify build-throne-btn is disabled when canBuildMarsThrone() is false",
+            "Verify no button is left permanently enabled or disabled"
+          ],
+          "passes": true
+        }
+      ]
+    }
+  ],
+  "integration": null,
+  "verification": {
+    "buildCommand": null,
+    "runCommand": "python3 -m http.server 8080",
+    "readySignal": "Serving HTTP",
+    "appType": "web",
+    "port": 8080,
+    "checks": [
+      {
+        "id": "v1",
+        "description": "Call Earth button appears when unit stands on Comm Dish",
+        "steps": [
+          "Open the game in browser",
+          "Use browser console to give resources: manually set state to have a comm dish on the map",
+          "Move unit onto the Comm Dish tile",
+          "Verify 'Call Earth' button becomes enabled",
+          "Click Call Earth and verify log message appears"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v2",
+        "description": "Build Mars Throne button appears only after contacting Earth with sufficient resources",
+        "steps": [
+          "After calling Earth, verify 'Build Mars Throne' button exists",
+          "Give the player at least 1 rock and 1 energy",
+          "Verify Build Mars Throne button becomes enabled",
+          "Verify with 0 rocks or 0 energy the button is disabled"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v3",
+        "description": "Building Mars Throne consumes all resources and shows victory",
+        "steps": [
+          "Click Build Mars Throne with resources available",
+          "Verify rocks count goes to 0",
+          "Verify energy count goes to 0",
+          "Verify Mars Throne structure appears on canvas on an adjacent tile",
+          "Verify victory log message appears: 'Elon has claimed Mars. Long live the King of Mars.'",
+          "Verify game is over (no further actions possible)"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v4",
+        "description": "Hotkeys L and M work correctly",
+        "steps": [
+          "Press L while on a Comm Dish to trigger Call Earth",
+          "Press M with sufficient resources to trigger Build Mars Throne",
+          "Open hotkey modal (ESC) and verify L and M are listed"
+        ],
+        "passes": false
+      },
+      {
+        "id": "v5",
+        "description": "Only one Mars Throne can be built per game",
+        "steps": [
+          "After building Mars Throne, verify game is over and no further building is possible",
+          "Verify state.marsThronePlaced is true"
+        ],
+        "passes": false
+      }
+    ]
+  }
+}

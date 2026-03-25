@@ -213,6 +213,12 @@ header .subtitle {
     color: #cc6644;
 }
 
+#game-log .log-entry.victory {
+    color: #FFD700;
+    font-weight: bold;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.5);
+}
+
 #action-panel .action-btn + .action-btn {
     margin-top: 6px;
 }

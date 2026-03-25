@@ -50,24 +50,31 @@
 - **Outcome**: success
 
 ## implementer/main — 2026-03-25T19:21:00Z
-- **Items completed**: t1, t2, t3, t4, t5, t6, q1, q2, q3, q4
-- **Tests run**: yes — verified server serves updated files via curl (HTTP 200, all 3 files confirmed)
+- **Items completed**: t1, t2, t3, t4, t5, t6, t7, t8, t9, q1, q2, q3, q4, q5
+- **Tests run**: no — no automated test suite; verified server serves HTTP 200 via curl
 - **Outcome**: success
 
 ## simplifier — 2026-03-25T19:45:00Z
-- **Summary**: Consolidated 6 repeated button show/hide/disable blocks in updateUI() into a data-driven array + loop, reducing 38 lines to 18 while preserving identical behavior.
-- **Tests run**: no — no automated test suite exists; verified JS syntax with node --check
-- **Outcome**: success
+- **Summary**: Reviewed Call Earth action and Mars Throne construction code — no meaningful simplifications found; code follows existing codebase conventions (guard-chain canX/buildX pattern, draw function structure, UI button/hotkey wiring)
+- **Tests run**: yes — node --check game.js passed (syntax valid)
+- **Outcome**: nothing to simplify
 
 ## reviewer — 2026-03-25T20:00:00Z
 - **Summary**: clean — no critical issues found across code quality, error handling, and test coverage
-- **quality_checklist**: 4 items verified (q1, q2, q3, q4 — all pass)
-- **Reviews**: code quality (1 issue investigated: AC3 movesLeft concern is spec wording imprecision, not a code bug — gatherResource() is a free action that doesn't consume moves), error handling (clean), test coverage (adequate — no test infra project-wide)
+- **quality_checklist**: 5 items verified (q1, q2, q3, q4, q5 — all pass)
+- **Reviews**: code quality (clean — all 8 acceptance criteria satisfied, conventions followed), error handling (clean — synchronous codebase, guard clauses consistent), test coverage (adequate — no test infra project-wide, consistent with all prior features)
 - **Outcome**: success / exit_signal: true
 
-## conflict-resolver — 2026-03-25T19:37:50Z
+## conflict-resolver — 2026-03-25T19:37:47Z
 
-- **Conflict**: index.html (1 conflict region) — upstream added "Call Earth" button, branch added "no-actions-msg" div
-- **Resolution**: Kept both additions — "Call Earth" button and "no-actions-msg" div placed sequentially in the actions panel
+- **Conflict**: game.js (4 conflict regions), index.html (2 conflict regions) — upstream added Call Earth dialog features (commDishesUsedThisTurn, callEarthDialogOpen, close-call-earth-dialog listener, 📡 emoji on button), branch added Mars Throne feature (marsThronePlaced state, build-throne-btn UI/listener/hotkey, canBuildMarsThrone)
+- **Resolution**: Kept both features — merged state properties (commDishesUsedThisTurn + callEarthDialogOpen from HEAD, marsThronePlaced from incoming); kept Call Earth button with 📡 emoji from HEAD; added Mars Throne button, listener, hotkey entry, and updateUI block from incoming; kept close-call-earth-dialog listener from HEAD alongside build-throne-btn listener
+- **Tests run**: none found — no automated test suite exists
+- **Outcome**: success
+
+## conflict-resolver — 2026-03-25T19:46:28Z
+
+- **Conflict**: index.html (1 conflict region) — upstream added no-actions-msg div, branch had build-throne-btn button; .agent-compose/ files had agent artifact conflicts
+- **Resolution**: Kept both — added build-throne-btn before no-actions-msg div in index.html; accepted theirs for agent artifact files; game.js and style.css auto-merged cleanly
 - **Tests run**: none found — no automated test suite exists
 - **Outcome**: success

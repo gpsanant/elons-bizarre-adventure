@@ -83,6 +83,7 @@
         contactedEarth: false,
         commDishesUsedThisTurn: [],
         callEarthDialogOpen: false,
+        marsThronePlaced: false,
     };
 
     function refreshView() {
@@ -273,6 +274,64 @@
         ctx.fillText("COMM", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
     }
 
+    function drawMarsThrone(structure) {
+        var x = structure.col * TILE_SIZE;
+        var y = structure.row * TILE_SIZE;
+
+        // Background tile fill (royal purple)
+        ctx.fillStyle = "rgba(106, 13, 173, 0.2)";
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+        // Wide stone base
+        ctx.fillStyle = "#4a3a2a";
+        ctx.fillRect(x + 4, y + TILE_SIZE - 12, TILE_SIZE - 8, 8);
+        ctx.strokeStyle = "#3a2a1a";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 4, y + TILE_SIZE - 12, TILE_SIZE - 8, 8);
+
+        // Seat
+        ctx.fillStyle = "#6a0dad";
+        ctx.fillRect(x + 8, y + TILE_SIZE - 18, TILE_SIZE - 16, 6);
+
+        // Tall rectangular back
+        ctx.fillStyle = "#4a3a2a";
+        ctx.fillRect(x + 10, y + 4, TILE_SIZE - 20, TILE_SIZE - 22);
+        ctx.strokeStyle = "#3a2a1a";
+        ctx.strokeRect(x + 10, y + 4, TILE_SIZE - 20, TILE_SIZE - 22);
+
+        // Inner back panel (royal purple)
+        ctx.fillStyle = "#6a0dad";
+        ctx.fillRect(x + 13, y + 7, TILE_SIZE - 26, TILE_SIZE - 28);
+
+        // Golden crown/orb at top
+        ctx.fillStyle = "#FFD700";
+        drawCircle(x + TILE_SIZE / 2, y + 6, 5);
+
+        // Crown points
+        ctx.fillStyle = "#FFD700";
+        ctx.beginPath();
+        ctx.moveTo(x + TILE_SIZE / 2 - 5, y + 6);
+        ctx.lineTo(x + TILE_SIZE / 2 - 7, y + 1);
+        ctx.lineTo(x + TILE_SIZE / 2 - 3, y + 4);
+        ctx.lineTo(x + TILE_SIZE / 2, y + 0);
+        ctx.lineTo(x + TILE_SIZE / 2 + 3, y + 4);
+        ctx.lineTo(x + TILE_SIZE / 2 + 7, y + 1);
+        ctx.lineTo(x + TILE_SIZE / 2 + 5, y + 6);
+        ctx.closePath();
+        ctx.fill();
+
+        // Armrests (gold)
+        ctx.fillStyle = "#FFD700";
+        ctx.fillRect(x + 4, y + TILE_SIZE - 18, 4, 6);
+        ctx.fillRect(x + TILE_SIZE - 8, y + TILE_SIZE - 18, 4, 6);
+
+        // Label
+        ctx.fillStyle = "#FFD700";
+        ctx.font = "bold 6px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("THRONE", x + TILE_SIZE / 2, y + TILE_SIZE - 1);
+    }
+
     function drawStructure(structure) {
         if (structure.type === "solar_panel") {
             drawSolarPanel(structure);
@@ -284,6 +343,10 @@
         }
         if (structure.type === "comm_dish") {
             drawCommDish(structure);
+            return;
+        }
+        if (structure.type === "mars_throne") {
+            drawMarsThrone(structure);
             return;
         }
         var x = structure.col * TILE_SIZE;
@@ -741,6 +804,10 @@
         var callEarthBtn = document.getElementById("call-earth-btn");
         callEarthBtn.disabled = !canCallEarth();
 
+        // Build Mars Throne button
+        var throneBtn = document.getElementById("build-throne-btn");
+        throneBtn.disabled = !canBuildMarsThrone();
+
         // Tile info
         updateTileInfo();
     }
@@ -768,6 +835,8 @@
                 structureText = "Subpar Battery";
             } else if (tileStructure.type === "comm_dish") {
                 structureText = "Comm Dish";
+            } else if (tileStructure.type === "mars_throne") {
+                structureText = "Mars Throne";
             }
         }
         // Dust storm info
@@ -1116,6 +1185,64 @@
 
         addLog(unit.name + " built a Comm Dish at (" + unit.col + ", " + unit.row + ")", "build");
 
+        refreshView();
+    }
+
+    // --------------- Call Earth Action ---------------
+    function canCallEarth() {
+        if (state.gameOver) return false;
+        if (state.contactedEarth) return false;
+        var unit = getSelectedUnit();
+        var structure = getStructureAt(unit.row, unit.col);
+        if (!structure || structure.type !== "comm_dish") return false;
+        return true;
+    }
+
+    function callEarth() {
+        if (!canCallEarth()) return;
+        state.contactedEarth = true;
+        addLog("Elon contacted Earth! A new blueprint has been received...", "build");
+        refreshView();
+    }
+
+    // --------------- Mars Throne Construction ---------------
+    function canBuildMarsThrone() {
+        if (state.gameOver) return false;
+        if (!state.contactedEarth) return false;
+        if (state.marsThronePlaced) return false;
+        if (state.resources.rocks < 1) return false;
+        if (getTotalHovelEnergy() < 1) return false;
+        var unit = getSelectedUnit();
+        if (!findAdjacentOpenTile(unit.row, unit.col)) return false;
+        return true;
+    }
+
+    function buildMarsThrone() {
+        if (!canBuildMarsThrone()) return;
+        var unit = getSelectedUnit();
+
+        // Consume ALL rocks
+        state.resources.rocks = 0;
+
+        // Drain ALL hovel energy
+        for (var i = 0; i < state.structures.length; i++) {
+            if (state.structures[i].type === "rock_hovel") {
+                state.structures[i].energy = 0;
+            }
+        }
+
+        // Place on adjacent open tile
+        var openTile = findAdjacentOpenTile(unit.row, unit.col);
+        state.structures.push({
+            type: "mars_throne",
+            row: openTile.row,
+            col: openTile.col,
+        });
+
+        state.marsThronePlaced = true;
+        addLog(unit.name + " built the Mars Throne at (" + openTile.col + ", " + openTile.row + ")", "build");
+        addLog("Elon has claimed Mars. Long live the King of Mars.", "victory");
+        state.gameOver = true;
         refreshView();
     }
 
@@ -1471,6 +1598,10 @@
         callEarth();
     });
     document.getElementById("close-call-earth-dialog").addEventListener("click", closeCallEarthDialog);
+    document.getElementById("build-throne-btn").addEventListener("click", function () {
+        if (state.gameOver) return;
+        buildMarsThrone();
+    });
     document.getElementById("close-hotkey-modal").addEventListener("click", toggleHotkeyModal);
 
     // Keyboard controls
@@ -1529,6 +1660,9 @@
             case "l":
                 callEarth();
                 return;
+            case "m":
+                buildMarsThrone();
+                return;
             case "Tab":
                 e.preventDefault();
                 if (state.units.length > 1) {
@@ -1563,6 +1697,8 @@
         state.dustStorms = [];
         state.dustStormIdCounter = 0;
         state.gameOver = false;
+        state.contactedEarth = false;
+        state.marsThronePlaced = false;
         state.logs = [];
         state.contactedEarth = false;
         state.commDishesUsedThisTurn = [];
